@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>اختبار الدخول</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="font-family: sans-serif; padding: 20px; text-align: center;">
+    <h2>اختبار الاتصال بـ Supabase</h2>
+    <input type="email" id="test-email" placeholder="البريد الإلكتروني" value="salemalhaj1999@gmail.com" style="padding:10px; width:80%; margin-bottom:10px;"><br>
+    <input type="password" id="test-password" placeholder="كلمة المرور" style="padding:10px; width:80%; margin-bottom:10px;"><br>
+    <button onclick="testLogin()" style="padding:10px 20px; background:green; color:white; border:none; border-radius:5px; font-size:16px;">اضغط هنا للاختبار</button>
+    <p id="result" style="margin-top:20px; font-weight:bold; font-size:18px; color:red;"></p>
+
+    <script>
+        const SUPABASE_URL = 'https://ggaxlmhzdeczhgyjwyct.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function testLogin() {
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            const res = document.getElementById('result');
+            res.style.color = 'blue';
+            res.innerText = 'جاري الاتصال... انتظر';
+
+            try {
+                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                res.style.color = 'green';
+                res.innerText = '🎉 نجح الدخول! الحساب موجود في قاعدة البيانات.';
+            } catch (err) {
+                res.style.color = 'red';
+                res.innerText = '❌ فشل الدخول. السبب: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
