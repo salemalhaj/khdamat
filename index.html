@@ -44,7 +44,15 @@
 </head>
 <body>
 
-    <!-- الشعار في شاشة الدخول -->
+    <!-- كاشف الأخطاء -->
+    <script>
+        alert("✅ تم تحميل الكود الجديد بنجاح! إذا رأيت هذه الرسالة، فالأزرار ستعمل.");
+        window.onerror = function(msg, url, line) {
+            alert("⚠️ حدث خطأ برمجي:\n" + msg + "\nفي السطر: " + line);
+            return false;
+        };
+    </script>
+
     <div id="auth-container">
         <div id="login-screen" class="container" style="margin-top: 40px;">
             <div class="card" style="text-align:center;">
@@ -89,7 +97,7 @@
                 <span data-i18n="app_name_short">خدمات</span>
             </h1>
             <div style="display:flex; gap:8px; align-items:center;">
-                <button class="theme-toggle" onclick="toggleLanguage()" title="Change Language"><i class="fa-solid fa-language"></i></button>
+                <button class="theme-toggle" onclick="toggleLanguage()"><i class="fa-solid fa-language"></i></button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
                 <button class="theme-toggle" onclick="showProfile()"><i class="fa-solid fa-user"></i></button>
                 <button class="theme-toggle" onclick="doLogout()"><i class="fa-solid fa-power-off"></i></button>
@@ -111,26 +119,20 @@
         </div>
     </div>
 
-    <!-- الأكواد البرمجية في النهاية لضمان تحميل الصفحة بالكامل قبل التنفيذ -->
     <script>
-        // كاشف الأخطاء
-        window.onerror = function(msg, url, line) {
-            alert("⚠️ خطأ برمجي:\n" + msg + "\nالسطر: " + line);
-            return false;
-        };
-
-        // تهيئة قاعدة البيانات مباشرة
+        // 1. المتغيرات الأساسية
         let _supabase = null;
+        let currentLang = localStorage.getItem('lang') || 'ar';
+        let currentUser = null, userProfile = null, platformSettings = {};
+
+        // محاولة الاتصال بـ Supabase
         try {
             _supabase = supabase.createClient('https://ggaxlmhzdeczhgyjwyct.supabase.co', 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI');
         } catch (e) {
             alert("فشل الاتصال بقاعدة البيانات: " + e.message);
         }
 
-        let currentLang = localStorage.getItem('lang') || 'ar';
-        let currentUser = null, userProfile = null, platformSettings = {};
-
-        // الترجمات
+        // 2. الترجمة
         const translations = {
             ar: { app_name: "منصة خدمات", app_name_short: "خدمات", login_title: "سجل دخولك", email: "البريد الإلكتروني", password: "كلمة المرور", login_btn: "دخول", create_acc: "أنشئ حساباً جديداً", signup_title: "حساب جديد", full_name: "الاسم الكامل", phone: "رقم الهاتف", role_user: "صاحب عمل (أطلب خدمة)", role_provider: "مزود خدمة (أقدم خدمة)", signup_btn: "تسجيل", have_acc: "لديك حساب؟ سجل الدخول", nav_home: "الرئيسية", nav_services: "الخدمات", nav_wallet: "المحفظة", nav_orders: "طلباتي", nav_my_services: "خدماتي", nav_admin: "الإدارة", welcome: "مرحباً، ", balance_title: "رصيد محفظتك", currency: "د.ل", deposit: "شحن", request_service: "طلب خدمة", add_service: "أضف خدمتك", admin_panel_btn: "لوحة الإدارة", tab_card: "بطاقة شحن", tab_bank: "تحويل بنكي", tab_withdraw: "سحب", tab_transfer: "تحويل", card_code: "أدخل كود البطاقة", confirm: "تأكيد", bank: "المصرف", name: "الاسم", account: "الحساب", transfer_amt: "المبلغ المحول", send_review: "إرسال للمراجعة", withdraw_note: "يتم السحب بعد موافقة الإدارة.", amount: "المبلغ", bank_name: "اسم المصرف", acc_num: "رقم الحساب", send: "إرسال", transfer_note: "حول فوراً عبر رقم هاتف المستخدم.", search: "بحث", transfer_now: "تحويل الآن", services_title: "الخدمات", new_service: "خدمة جديدة", status: "الحالة", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", no_services: "لا يوجد خدمات.", no_services_avail: "لا يوجد خدمات متاحة.", request: "طلب", add_service_title: "إضافة خدمة", price: "السعر", desc: "الوصف", cancel: "إلغاء", orders_title: "طلباتي", no_orders: "لا يوجد طلبات.", admin_title: "الإدارة", users: "المستخدمون", total_money: "إجمالي الأموال", withdrawals: "سحب", transfers: "تحويلات", cards: "بطاقات", approve: "موافقة", reject: "رفض", view_receipt: "عرض الإيصال", generate: "توليد", card_value: "قيمة البطاقة", count: "العدد", alert: "تنبيه", error: "خطأ", success: "تم", fill_fields: "ملء جميع الحقول", login_failed: "فشل الدخول", invalid_creds: "بيانات غير صحيحة", profile_not_found: "الملف الشخصي غير موجود", creating: "جاري الإنشاء...", created_login: "تم الإنشاء! سجل الدخول الآن", verifying: "جاري التحقق...", sending: "جاري الإرسال...", uploading: "جاري الرفع...", request_sent: "تم إرسال الطلب", upload_failed: "فشل رفع الملف", number_not_found: "رقم غير موجود", transferring: "جاري التحويل...", transfer_success: "تم التحويل بنجاح", insufficient_balance: "رصيد غير كافٍ", top_up: "اشحن محفظتك", confirm_order: "تأكيد", deduct_for: "خصم {amount} لطلب {title}؟", yes: "نعم", ordering: "جاري الطلب...", order_success: "تم الطلب بنجاح", loading: "جاري التحميل...", generating: "جاري التوليد...", generated: "تم التوليد", reject_reason: "سبب الرفض", rejected_msg: "تم الرفض", approved_msg: "تمت الموافقة", bal_insufficient: "الرصيد غير كافٍ", added_msg: "تمت الإضافة", profile: "الملف الشخصي", role: "الدور", role_admin: "مدير", role_provider: "مزود", role_user: "مستخدم", close: "إغلاق", card_redeemed: "تم شحن البطاقة بنجاح!", card_error: "البطاقة غير صالحة أو مستخدمة" },
             en: { app_name: "Khdamat Platform", app_name_short: "Khdamat", login_title: "Login to your account", email: "Email", password: "Password", login_btn: "Login", create_acc: "Create a new account", signup_title: "New Account", full_name: "Full Name", phone: "Phone Number", role_user: "Client (Request Service)", role_provider: "Provider (Offer Service)", signup_btn: "Sign Up", have_acc: "Have an account? Login", nav_home: "Home", nav_services: "Services", nav_wallet: "Wallet", nav_orders: "My Orders", nav_my_services: "My Services", nav_admin: "Admin", welcome: "Welcome, ", balance_title: "Wallet Balance", currency: "LYD", deposit: "Deposit", request_service: "Request Service", add_service: "Add your service", admin_panel_btn: "Admin Panel", tab_card: "Recharge Card", tab_bank: "Bank Transfer", tab_withdraw: "Withdraw", tab_transfer: "Transfer", card_code: "Enter card code", confirm: "Confirm", bank: "Bank", name: "Name", account: "Account", transfer_amt: "Transferred Amount", send_review: "Send for Review", withdraw_note: "Withdrawal requires admin approval.", amount: "Amount", bank_name: "Bank Name", acc_num: "Account Number", send: "Send", transfer_note: "Transfer instantly via user's phone number.", search: "Search", transfer_now: "Transfer Now", services_title: "Services", new_service: "New Service", status: "Status", approved: "Approved", pending: "Pending", rejected: "Rejected", no_services: "No services found.", no_services_avail: "No services available.", request: "Request", add_service_title: "Add Service", price: "Price", desc: "Description", cancel: "Cancel", orders_title: "My Orders", no_orders: "No orders found.", admin_title: "Admin Panel", users: "Users", total_money: "Total Money", withdrawals: "Withdrawals", transfers: "Transfers", cards: "Cards", approve: "Approve", reject: "Reject", view_receipt: "View Receipt", generate: "Generate", card_value: "Card Value", count: "Count", alert: "Alert", error: "Error", success: "Done", fill_fields: "Please fill all fields", login_failed: "Login Failed", invalid_creds: "Invalid credentials", profile_not_found: "Profile not found", creating: "Creating...", created_login: "Created! Login now", verifying: "Verifying...", sending: "Sending...", uploading: "Uploading...", request_sent: "Request sent", upload_failed: "File upload failed", number_not_found: "Number not found", transferring: "Transferring...", transfer_success: "Transferred successfully", insufficient_balance: "Insufficient balance", top_up: "Please top up your wallet", confirm_order: "Confirm", deduct_for: "Deduct {amount} for ordering {title}?", yes: "Yes", ordering: "Ordering...", order_success: "Order successful", loading: "Loading...", generating: "Generating...", generated: "Generated successfully", reject_reason: "Rejection reason", rejected_msg: "Rejected", approved_msg: "Approved", bal_insufficient: "Insufficient balance", added_msg: "Added successfully", profile: "Profile", role: "Role", role_admin: "Admin", role_provider: "Provider", role_user: "User", close: "Close", card_redeemed: "Card redeemed successfully!", card_error: "Invalid or used card" }
@@ -187,5 +189,4 @@
             const n = document.getElementById('signup-name').value.trim();
             const e = document.getElementById('signup-email').value.trim();
             const p = document.getElementById('signup-phone').value.trim();
-            const pw = document.getElementById('signup-password').value;
-            c
+            const pw = document.getElementById('signup-password').va
