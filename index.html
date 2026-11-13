@@ -38,6 +38,10 @@
         .stat-box { text-align: center; padding: 15px; background: var(--bg); border-radius: 10px; }
         .stat-box h3 { color: var(--accent); font-size: 22px; margin-bottom: 5px; }
         .stat-box p { font-size: 11px; color: var(--text-muted); }
+        
+        /* تنسيق الشعار */
+        .logo-img { width: 110px; height: 110px; object-fit: contain; margin-bottom: 15px; border-radius: 20px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 5px; }
+        .logo-header { width: 35px; height: 35px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; }
     </style>
 </head>
 <body>
@@ -49,6 +53,10 @@
                     <button class="theme-toggle" onclick="toggleLanguage()" style="background:var(--primary);"><i class="fa-solid fa-language"></i></button>
                     <button class="theme-toggle" onclick="toggleTheme()" style="background:var(--primary);" id="theme-btn-login"><i class="fa-solid fa-moon"></i></button>
                 </div>
+                
+                <!-- الشعار في شاشة الدخول -->
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                
                 <h2 style="color:var(--primary); margin-bottom:5px;" data-i18n="app_name">منصة خدمات</h2>
                 <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;" data-i18n="login_title">سجل دخولك</p>
                 <input type="email" id="login-email" data-i18n-placeholder="email" placeholder="البريد الإلكتروني">
@@ -59,6 +67,9 @@
         </div>
         <div id="signup-screen" class="container hidden" style="margin-top: 30px;">
             <div class="card" style="text-align:center;">
+                <!-- الشعار في شاشة التسجيل -->
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                
                 <h2 style="color:var(--accent); margin-bottom:15px;" data-i18n="signup_title">حساب جديد</h2>
                 <input type="text" id="signup-name" data-i18n-placeholder="full_name" placeholder="الاسم الكامل">
                 <input type="email" id="signup-email" data-i18n-placeholder="email" placeholder="البريد الإلكتروني">
@@ -76,7 +87,11 @@
 
     <div id="main-app" class="hidden">
         <div class="header">
-            <h1><i class="fa-solid fa-briefcase"></i> <span data-i18n="app_name_short">خدمات</span></h1>
+            <h1>
+                <!-- الشعار في الشريط العلوي للتطبيق -->
+                <img src="logo.png" alt="Logo" class="logo-header" onerror="this.style.display='none'">
+                <span data-i18n="app_name_short">خدمات</span>
+            </h1>
             <div style="display:flex; gap:8px; align-items:center;">
                 <button class="theme-toggle" onclick="toggleLanguage()" title="Change Language"><i class="fa-solid fa-language"></i></button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
@@ -179,23 +194,19 @@
             document.documentElement.lang = currentLang;
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             
-            // ترجمة النصوص الثابتة
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 el.textContent = t(el.getAttribute('data-i18n'));
             });
             
-            // ترجمة النصوص التوضيحية داخل الحقول
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
             });
             
-            // تحديث اسم التنقل بناءً على الدور
             const ordersNav = document.getElementById('nav-orders');
             if (ordersNav && ordersNav.querySelector('span')) {
                 ordersNav.querySelector('span').textContent = (userProfile && userProfile.role === 'provider') ? t('nav_my_services') : t('nav_orders');
             }
             
-            // إعادة رسم الصفحة الحالية (لتحديث النصوص الديناميكية)
             if (currentUser) {
                 const activePage = document.querySelector('.page:not(.hidden)');
                 if (activePage) {
@@ -209,7 +220,6 @@
             currentLang = currentLang === 'ar' ? 'en' : 'ar';
             localStorage.setItem('lang', currentLang);
             applyTranslations();
-            // تنبيه بسيط لتأكيد تغيير اللغة
             Swal.fire({
                 title: currentLang === 'ar' ? 'تم تغيير اللغة' : 'Language Changed',
                 text: currentLang === 'ar' ? 'اللغة الآن: العربية' : 'Language is now: English',
@@ -232,15 +242,4 @@
         }
         function updateThemeIcons(theme) {
             const icon = theme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-            const b1 = document.getElementById('theme-btn');
-            const b2 = document.getElementById('theme-btn-login');
-            if (b1) b1.innerHTML = icon;
-            if (b2) b2.innerHTML = icon;
-        }
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        setTimeout(() => updateThemeIcons(savedTheme), 100);
-
-        // ================= 4. التنقل بين الشاشات =================
-        function showSignup(e) { e.preventDefault(); document.getElementById('login-screen').classList.add('hidden'); document.getElementById('signup-screen').classList.remove('hidden'); }
-        functi
+           
