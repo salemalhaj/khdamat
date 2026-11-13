@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>منصة خدمات - Khdamat</title>
-    <script>
-        // كاشف أخطاء في أعلى الصفحة
-        window.onerror = function(msg, url, line) {
-            alert("تنبيه من المتصفح: " + msg + "\nالسطر: " + line);
-            return false;
-        };
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -56,8 +49,8 @@
                 <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">سجل دخولك</p>
                 <input type="email" id="login-email" placeholder="البريد الإلكتروني">
                 <input type="password" id="login-password" placeholder="كلمة المرور">
-                <button class="btn btn-primary" onclick="window.app.doLogin()">دخول</button>
-                <a href="#" onclick="window.app.toggleAuth('signup'); return false;" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">أنشئ حساباً جديداً</a>
+                <button class="btn btn-primary" onclick="doLogin()">دخول</button>
+                <a href="#" onclick="showSignup(event)" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">أنشئ حساباً جديداً</a>
             </div>
         </div>
         <div id="signup-screen" class="container hidden" style="margin-top: 30px;">
@@ -71,8 +64,8 @@
                     <option value="user">صاحب عمل (أطلب خدمة)</option>
                     <option value="provider">مزود خدمة (أقدم خدمة)</option>
                 </select>
-                <button class="btn btn-accent" onclick="window.app.doSignup()">تسجيل</button>
-                <a href="#" onclick="window.app.toggleAuth('login'); return false;" style="color:var(--primary); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">لديك حساب؟ سجل الدخول</a>
+                <button class="btn btn-accent" onclick="doSignup()">تسجيل</button>
+                <a href="#" onclick="showLogin(event)" style="color:var(--primary); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">لديك حساب؟ سجل الدخول</a>
             </div>
         </div>
     </div>
@@ -81,9 +74,9 @@
         <div class="header">
             <h1><i class="fa-solid fa-briefcase"></i> خدمات</h1>
             <div style="display:flex; gap:8px; align-items:center;">
-                <button class="theme-toggle" onclick="window.app.toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
-                <button class="theme-toggle" onclick="window.app.showProfile()"><i class="fa-solid fa-user"></i></button>
-                <button class="theme-toggle" onclick="window.app.doLogout()"><i class="fa-solid fa-power-off"></i></button>
+                <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
+                <button class="theme-toggle" onclick="showProfile()"><i class="fa-solid fa-user"></i></button>
+                <button class="theme-toggle" onclick="doLogout()"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
         <div class="container">
@@ -94,50 +87,223 @@
             <div id="page-admin" class="page hidden"></div>
         </div>
         <div class="bottom-nav">
-            <div class="nav-item active" id="nav-home" onclick="window.app.navTo('home')"><i class="fa-solid fa-house"></i>الرئيسية</div>
-            <div class="nav-item" id="nav-services" onclick="window.app.navTo('services')"><i class="fa-solid fa-list-check"></i>الخدمات</div>
-            <div class="nav-item" id="nav-wallet" onclick="window.app.navTo('wallet')"><i class="fa-solid fa-wallet"></i>المحفظة</div>
-            <div class="nav-item" id="nav-orders" onclick="window.app.navTo('orders')"><i class="fa-solid fa-clipboard-list"></i>طلباتي</div>
-            <div class="nav-item hidden" id="nav-admin" onclick="window.app.navTo('admin')"><i class="fa-solid fa-shield-halved"></i>الإدارة</div>
+            <div class="nav-item active" id="nav-home" onclick="navTo('home')"><i class="fa-solid fa-house"></i>الرئيسية</div>
+            <div class="nav-item" id="nav-services" onclick="navTo('services')"><i class="fa-solid fa-list-check"></i>الخدمات</div>
+            <div class="nav-item" id="nav-wallet" onclick="navTo('wallet')"><i class="fa-solid fa-wallet"></i>المحفظة</div>
+            <div class="nav-item" id="nav-orders" onclick="navTo('orders')"><i class="fa-solid fa-clipboard-list"></i>طلباتي</div>
+            <div class="nav-item hidden" id="nav-admin" onclick="navTo('admin')"><i class="fa-solid fa-shield-halved"></i>الإدارة</div>
         </div>
     </div>
 
     <script>
-        window.app = {};
-        const SUPABASE_URL = 'https://ggaxlmhzdeczhgyjwyct.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI';
-        let _supabase = null;
+        // 1. إعدادات Supabase
+        const _supabase = supabase.createClient('https://ggaxlmhzdeczhgyjwyct.supabase.co', 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI');
         let currentUser = null, userProfile = null, platformSettings = {};
 
-        // تهيئة التطبيق فور تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof supabase === 'undefined') {
-                alert("فشل تحميل مكتبة Supabase. يرجى التحقق من الإنترنت.");
-                return;
-            }
-            _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            
-            // تفعيل الوضع الليلي
-            const saved = localStorage.getItem('theme');
-            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme);
-            const btn = document.getElementById('theme-btn');
-            if (btn) btn.innerHTML = theme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-
-            // فحص الجلسة
-            checkSession();
-        });
-
-        window.app.toggleTheme = function() {
+        // 2. دالة الوضع الليلي
+        function toggleTheme() {
             const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
             document.getElementById('theme-btn').innerHTML = next === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-        };
+        }
+        // تفعيل الوضع الليلي عند البدء
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
 
-        window.app.toggleAuth = function(screen) {
-            if (screen === 'signup') {
-                document.getElementById('login-screen').classList.add('hidden');
+        // 3. التنقل بين الشاشات
+        function showSignup(e) {
+            e.preventDefault();
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('signup-screen').classList.remove('hidden');
+        }
+        function showLogin(e) {
+            e.preventDefault();
+            document.getElementById('signup-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        // 4. إنشاء حساب
+        async function doSignup() {
+            const n = document.getElementById('signup-name').value.trim();
+            const e = document.getElementById('signup-email').value.trim();
+            const p = document.getElementById('signup-phone').value.trim();
+            const pw = document.getElementById('signup-password').value;
+            const r = document.getElementById('signup-role').value;
+            if (!n || !e || !p || !pw) return Swal.fire('تنبيه', 'ملء جميع الحقول', 'warning');
+            
+            Swal.fire({ title: 'جاري الإنشاء...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const { error } = await _supabase.auth.signUp({ email: e, password: pw, options: { data: { full_name: n, role: r, phone: p } } });
+            if (error) return Swal.fire('خطأ', error.message, 'error');
+            
+            Swal.fire('تم', 'تم الإنشاء! سجل الدخول الآن', 'success');
+            document.getElementById('signup-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        // 5. تسجيل الدخول
+        async function doLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            if (!email || !password) return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
+            
+            Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                Swal.close();
+                return Swal.fire('فشل الدخول', 'بيانات غير صحيحة: ' + error.message, 'error');
+            }
+
+            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', data.user.id).single();
+            const { data: settings } = await _supabase.from('platform_settings').select('*').eq('id', 1).single();
+            
+            Swal.close();
+            if (!profile) return Swal.fire('خطأ', 'الملف الشخصي غير موجود', 'error');
+
+            currentUser = data.user;
+            userProfile = profile;
+            platformSettings = settings || {};
+            setupUI();
+            navTo('home');
+        }
+
+        // 6. إعداد الواجهة بعد الدخول
+        function setupUI() {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+
+            document.getElementById('nav-admin').classList.add('hidden');
+            document.getElementById('nav-services').classList.remove('hidden');
+            document.getElementById('nav-orders').classList.remove('hidden');
+
+            if (userProfile.role === 'admin') {
+                document.getElementById('nav-admin').classList.remove('hidden');
+                document.getElementById('nav-services').classList.add('hidden');
+                document.getElementById('nav-orders').classList.add('hidden');
+            } else if (userProfile.role === 'provider') {
+                document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-briefcase"></i>خدماتي';
+            } else {
+                document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-clipboard-list"></i>طلباتي';
+            }
+        }
+
+        // 7. تسجيل الخروج
+        async function doLogout() { await _supabase.auth.signOut(); location.reload(); }
+
+        // 8. التنقل بين الصفحات
+        function navTo(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page-' + page).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('nav-' + page).classList.add('active');
+            
+            if (page === 'home') renderHome();
+            if (page === 'wallet') renderWallet();
+            if (page === 'services') renderServices();
+            if (page === 'orders') renderOrders();
+            if (page === 'admin') renderAdmin();
+        }
+
+        // 9. الملف الشخصي
+        function showProfile() {
+            if (!userProfile) return;
+            Swal.fire({
+                title: 'الملف الشخصي',
+                html: `<p>الاسم: <b>${userProfile.full_name}</b></p><p>الدور: <b>${userProfile.role}</b></p>`,
+                confirmButtonText: 'إغلاق'
+            });
+        }
+
+        // 10. الصفحة الرئيسية
+        async function renderHome() {
+            const { data: w } = await _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+            const bal = w ? Number(w.balance).toFixed(2) : '0.00';
+            let c = `
+                <div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;">
+                    <p style="font-size:13px; opacity:0.9;">مرحباً، ${userProfile.full_name}</p>
+                    <div class="balance" style="color:white;">${bal} <span style="font-size:16px;">د.ل</span></div>
+                </div>`;
+            if (userProfile.role === 'provider') {
+                c += `<button class="btn btn-accent" onclick="showAddService()"><i class="fa-solid fa-plus"></i> أضف خدمتك</button>`;
+            } else if (userProfile.role === 'user') {
+                c += `<div class="grid-2">
+                    <button class="btn btn-accent" onclick="navTo('wallet')"><i class="fa-solid fa-plus-circle"></i> شحن</button>
+                    <button class="btn btn-primary" onclick="navTo('services')"><i class="fa-solid fa-search"></i> طلب خدمة</button>
+                </div>`;
+            } else if (userProfile.role === 'admin') {
+                c += `<button class="btn btn-accent" onclick="navTo('admin')"><i class="fa-solid fa-shield-halved"></i> لوحة الإدارة</button>`;
+            }
+            document.getElementById('page-home').innerHTML = c;
+        }
+
+        // 11. المحفظة
+        async function renderWallet() {
+            document.getElementById('page-wallet').innerHTML = `
+                <div class="card">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'w-card')">بطاقة شحن</div>
+                        <div class="tab" onclick="switchTab(this, 'w-bank')">تحويل بنكي</div>
+                        <div class="tab" onclick="switchTab(this, 'w-with')">سحب</div>
+                        <div class="tab" onclick="switchTab(this, 'w-trans')">تحويل</div>
+                    </div>
+                    <div id="w-card">
+                        <input type="text" id="card-code" placeholder="أدخل كود البطاقة">
+                        <button class="btn btn-primary" onclick="redeemCard()">تأكيد</button>
+                    </div>
+                    <div id="w-bank" class="hidden">
+                        <div class="bank-details">
+                            <p><span>المصرف:</span> ${platformSettings.bank_name || 'غير محدد'}</p>
+                            <p><span>الاسم:</span> ${platformSettings.account_name || 'غير محدد'}</p>
+                            <p><span>الحساب:</span> ${platformSettings.account_number || 'غير محدد'}</p>
+                            <p><span>IBAN:</span> ${platformSettings.iban || 'غير محدد'}</p>
+                        </div>
+                        <input type="number" id="bank-amt" placeholder="المبلغ المحول">
+                        <input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);">
+                        <button class="btn btn-accent" onclick="submitBankTransfer()">إرسال للمراجعة</button>
+                    </div>
+                    <div id="w-with" class="hidden">
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">يتم السحب بعد موافقة الإدارة.</p>
+                        <input type="number" id="with-amt" placeholder="المبلغ">
+                        <input type="text" id="with-bank" placeholder="اسم المصرف">
+                        <input type="text" id="with-acc" placeholder="رقم الحساب">
+                        <button class="btn btn-primary" onclick="requestWithdrawal()">إرسال</button>
+                    </div>
+                    <div id="w-trans" class="hidden">
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">حول فوراً عبر رقم هاتف المستخدم.</p>
+                        <input type="text" id="trans-phone" placeholder="رقم الهاتف">
+                        <button class="btn btn-accent" onclick="searchPhone()">بحث</button>
+                        <div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
+                        <input type="number" id="trans-amt" placeholder="المبلغ">
+                        <button class="btn btn-primary" onclick="executeTransfer()">تحويل الآن</button>
+                    </div>
+                </div>`;
+        }
+
+        function switchTab(el, id) {
+            el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            ['w-card', 'w-bank', 'w-with', 'w-trans'].forEach(x => document.getElementById(x)?.classList.add('hidden'));
+            document.getElementById(id)?.classList.remove('hidden');
+        }
+
+        async function redeemCard() {
+            const code = document.getElementById('card-code').value.trim();
+            if (!code) return Swal.fire('تنبيه', 'أدخل الكود', 'warning');
+            Swal.fire({ title: 'جاري التحقق...', didOpen: () => Swal.showLoading() });
+            const { data, error } = await _supabase.rpc('redeem_card', { card_code: code });
+            if (error || !data.success) return Swal.fire('خطأ', error ? 'فشل الاتصال' : data.message, 'error');
+            Swal.fire('تم', data.message, 'success');
+            if (data.amount >= 1000) await _supabase.rpc('notify_admins', { p_title: 'شحن كبير', p_message: `${userProfile.full_name} شحن ${data.amount} د.ل` });
+            renderWallet();
+        }
+
+        async function submitBankTransfer() {
+            const amount = parseFloat(document.getElementById('bank-amt').value);
+            const file = document.getElementById('bank-file').files[0];
+            if (!amount || !file) return Swal.fire('تنبيه', 'أدخل المبلغ والملف', 'warning');
+            Swal.fire({ title: 'جاري الرفع...', didOpen: () => Swal.showLoading() });
+            const fileName = `${Date.now()}_${currentUser.id}.${file.name.spli     document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('signup-screen').classList.remove('hidden');
             } else {
                 document.getElementById('signup-screen').classList.add('hidden');
