@@ -3,263 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>منصة خدمات - Khdamat</title>
+    <title>منصة خدمات</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #1e7d22; --primary-light: #3aa935; --accent: #f39200; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333333; --text-muted: #777777; --border: #dddddd; --shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --text-muted: #aaaaaa; --border: #333333; --shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent;}
-        body { background: var(--bg); color: var(--text); padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
-        .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .header h1 { font-size: 20px; display: flex; align-items: center; gap: 8px; }
-        .theme-toggle { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; border-top: 1px solid var(--border); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; cursor: pointer; gap: 4px; }
-        .nav-item.active { color: var(--primary); font-weight: bold; }
-        .nav-item i { font-size: 22px; }
-        .container { padding: 15px; max-width: 600px; margin: auto; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: var(--shadow); }
-        input, select, textarea { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background: var(--bg); color: var(--text); }
-        .btn { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; text-decoration: none; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-accent { background: var(--accent); color: white; }
-        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-danger { background: #dc3545; color: white; }
-        .tabs { display: flex; margin-bottom: 15px; border-bottom: 2px solid var(--border); overflow-x: auto; }
-        .tab { padding: 10px 15px; cursor: pointer; font-weight: bold; color: var(--text-muted); white-space: nowrap; }
-        .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); margin-bottom: -2px; }
+        :root { --primary: #1e7d22; --primary-light: #3aa935; --accent: #f39200; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333333; --border: #dddddd; }
+        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        input, select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; background: var(--bg); color: var(--text); }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-accent { background: var(--accent); }
         .hidden { display: none !important; }
-        .balance { font-size: 36px; font-weight: bold; color: var(--primary); text-align: center; margin: 10px 0; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .bank-details { background: rgba(243,146,0,0.1); padding: 15px; border-radius: 10px; border-right: 4px solid var(--accent); margin: 10px 0; font-size: 14px; line-height: 1.8; }
-        .bank-details span { font-weight: bold; color: var(--accent); }
+        .link { color: var(--accent); cursor: pointer; font-weight: bold; text-decoration: none; font-size: 14px; display: block; text-align: center; margin-top: 15px;}
+        h2 { text-align: center; margin-bottom: 20px; color: var(--primary); }
     </style>
 </head>
 <body>
+
     <!-- شاشة الدخول -->
-    <div id="auth-container" class="container" style="margin-top: 30px;">
-        <div id="login-screen" class="card" style="text-align:center;">
-            <h2 style="color:var(--primary); margin-bottom:5px;">منصة خدمات</h2>
-            <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">سجل دخولك لمتابعة أعمالك</p>
-            <input type="email" id="login-email" placeholder="البريد الإلكتروني">
-            <input type="password" id="login-password" placeholder="كلمة المرور">
-            <button class="btn btn-primary" onclick="window.doLogin()">دخول</button>
-            <p style="font-size:14px; margin-top:15px; color:var(--text-muted);">ليس لديك حساب؟ <a href="#" onclick="window.showSignup(event)" style="color:var(--accent); font-weight:bold; text-decoration:none;">أنشئ حساباً جديداً</a></p>
-        </div>
-        
-        <!-- شاشة التسجيل -->
-        <div id="signup-screen" class="card hidden" style="text-align:center;">
-            <h2 style="color:var(--accent); margin-bottom:5px;">إنشاء حساب جديد</h2>
-            <input type="text" id="signup-name" placeholder="الاسم الكامل">
-            <input type="email" id="signup-email" placeholder="البريد الإلكتروني">
-            <input type="text" id="signup-phone" placeholder="رقم الهاتف">
-            <input type="password" id="signup-password" placeholder="كلمة المرور">
-            <select id="signup-role">
-                <option value="user">أبحث عن خدمة (صاحب عمل)</option>
-                <option value="provider">أقدم خدمة (مزود خدمة)</option>
-            </select>
-            <button class="btn btn-accent" onclick="window.doSignup()">تسجيل الحساب</button>
-            <p style="font-size:14px; margin-top:15px; color:var(--text-muted);">لديك حساب؟ <a href="#" onclick="window.showLogin(event)" style="color:var(--primary); font-weight:bold; text-decoration:none;">تسجيل الدخول</a></p>
-        </div>
+    <div id="login-screen" class="card">
+        <h2>منصة خدمات</h2>
+        <input type="email" id="login-email" placeholder="البريد الإلكتروني">
+        <input type="password" id="login-password" placeholder="كلمة المرور">
+        <button class="btn btn-primary" onclick="window.doLogin()">دخول</button>
+        <a href="#" class="link" onclick="window.showSignup(event)">إنشاء حساب جديد</a>
     </div>
 
-    <!-- التطبيق الرئيسي -->
-    <div id="main-app" class="hidden">
-        <div class="header">
-            <h1><i class="fa-solid fa-briefcase"></i> خدمات</h1>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button class="theme-toggle" onclick="window.toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
-                <button class="theme-toggle" onclick="window.showProfile()" style="font-size:14px; width:auto; padding:0 10px; border-radius:20px;"><i class="fa-solid fa-user"></i></button>
-                <button class="theme-toggle" onclick="window.doLogout()" style="font-size:14px; width:auto; padding:0 10px; border-radius:20px;"><i class="fa-solid fa-power-off"></i></button>
-            </div>
-        </div>
-        <div class="container">
-            <div id="page-home" class="page"></div>
-            <div id="page-wallet" class="page hidden"></div>
-            <div id="page-services" class="page hidden"></div>
-            <div id="page-orders" class="page hidden"></div>
-            <div id="page-admin" class="page hidden"></div>
-        </div>
-        <div class="bottom-nav">
-            <div class="nav-item active" id="nav-home" onclick="window.navTo('home')"><i class="fa-solid fa-house"></i>الرئيسية</div>
-            <div class="nav-item" id="nav-services" onclick="window.navTo('services')"><i class="fa-solid fa-list-check"></i>الخدمات</div>
-            <div class="nav-item" id="nav-wallet" onclick="window.navTo('wallet')"><i class="fa-solid fa-wallet"></i>المحفظة</div>
-            <div class="nav-item" id="nav-orders" onclick="window.navTo('orders')"><i class="fa-solid fa-clipboard-list"></i>طلباتي</div>
-            <div class="nav-item hidden" id="nav-admin" onclick="window.navTo('admin')"><i class="fa-solid fa-shield-halved"></i>الإدارة</div>
-        </div>
+    <!-- شاشة التسجيل -->
+    <div id="signup-screen" class="card hidden">
+        <h2>حساب جديد</h2>
+        <input type="text" id="signup-name" placeholder="الاسم الكامل">
+        <input type="email" id="signup-email" placeholder="البريد الإلكتروني">
+        <input type="text" id="signup-phone" placeholder="رقم الهاتف">
+        <input type="password" id="signup-password" placeholder="كلمة المرور">
+        <select id="signup-role">
+            <option value="user">صاحب عمل (أطلب خدمة)</option>
+            <option value="provider">مزود خدمة (أقدم خدمة)</option>
+        </select>
+        <button class="btn btn-accent" onclick="window.doSignup()">تسجيل</button>
+        <a href="#" class="link" onclick="window.showLogin(event)">لديك حساب؟ سجل الدخول</a>
+    </div>
+
+    <!-- لوحة التحكم (تظهر بعد الدخول) -->
+    <div id="dashboard-screen" class="card hidden" style="text-align: center;">
+        <h2 id="welcome-msg">مرحباً</h2>
+        <p style="margin-bottom: 20px;">أنت مسجل الآن بنجاح.</p>
+        <div id="role-info" style="padding: 15px; background: var(--bg); border-radius: 8px; margin-bottom: 20px;"></div>
+        <button class="btn btn-primary" onclick="window.doLogout()">تسجيل الخروج</button>
     </div>
 
     <script>
+        // إعدادات Supabase
         const SUPABASE_URL = 'https://ggaxlmhzdeczhgyjwyct.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        let currentUser = null;
-        let userProfile = null;
 
-        (function() {
-            const saved = localStorage.getItem('theme');
-            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme);
-            const btn = document.getElementById('theme-btn');
-            if (btn) btn.innerHTML = theme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-        })();
-        window.toggleTheme = function() {
-            const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            document.getElementById('theme-btn').innerHTML = next === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+        // التبديل بين الشاشات
+        window.showSignup = function(e) {
+            e.preventDefault();
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('signup-screen').classList.remove('hidden');
         };
 
-        window.showSignup = (e) => { e.preventDefault(); document.getElementById('login-screen').classList.add('hidden'); document.getElementById('signup-screen').classList.remove('hidden'); };
-        window.showLogin = (e) => { e.preventDefault(); document.getElementById('signup-screen').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); };
+        window.showLogin = function(e) {
+            e.preventDefault();
+            document.getElementById('signup-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        };
 
+        // دالة إنشاء حساب
         window.doSignup = async function() {
             const name = document.getElementById('signup-name').value.trim();
             const email = document.getElementById('signup-email').value.trim();
             const phone = document.getElementById('signup-phone').value.trim();
             const password = document.getElementById('signup-password').value;
             const role = document.getElementById('signup-role').value;
-            if (!name || !email || !phone || !password) return Swal.fire('تنبيه', 'الرجاء ملء جميع الحقول', 'warning');
+
+            if (!name || !email || !phone || !password) {
+                return Swal.fire('تنبيه', 'الرجاء ملء جميع الحقول', 'warning');
+            }
+
             Swal.fire({ title: 'جاري الإنشاء...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            try {
-                const { error } = await _supabase.auth.signUp({ email, password, options: { data: { full_name: name, role: role, phone: phone } } });
-                if (error) throw error;
-                Swal.fire('تم', 'تم إنشاء الحساب! سجل الدخول الآن.', 'success');
-                window.showLogin();
-            } catch (err) { Swal.fire('خطأ', err.message, 'error'); }
+
+            const { error } = await _supabase.auth.signUp({
+                email, password,
+                options: { data: { full_name: name, role: role, phone: phone } }
+            });
+
+            if (error) {
+                Swal.fire('خطأ', error.message, 'error');
+            } else {
+                Swal.fire('تم', 'تم إنشاء الحساب بنجاح! سجل الدخول الآن.', 'success');
+                window.showLogin(new Event('click'));
+            }
         };
 
+        // دالة تسجيل الدخول
         window.doLogin = async function() {
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
-            if (!email || !password) return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
+
+            if (!email || !password) {
+                return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
+            }
+
             Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            try {
-                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-                if (error) throw new Error('بيانات الدخول غير صحيحة');
-                const { data: profile, error: profileError } = await _supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
-                if (profileError) throw new Error('مشكلة في جلب البيانات');
-                if (!profile) throw new Error('الملف الشخصي غير موجود');
-                currentUser = data.user; userProfile = profile;
-                Swal.close();
-                document.getElementById('auth-container').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('nav-admin').classList.add('hidden');
-                document.getElementById('nav-services').classList.remove('hidden');
-                document.getElementById('nav-orders').classList.remove('hidden');
-                document.getElementById('nav-wallet').classList.remove('hidden');
-                if (profile.role === 'admin') {
-                    document.getElementById('nav-admin').classList.remove('hidden');
-                    document.getElementById('nav-services').classList.add('hidden');
-                    document.getElementById('nav-orders').classList.add('hidden');
-                } else if (profile.role === 'provider') {
-                    document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-briefcase"></i>خدماتي';
-                } else {
-                    document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-clipboard-list"></i>طلباتي';
-                }
-                window.navTo('home');
-            } catch (err) { Swal.fire('فشل الدخول', err.message, 'error'); }
+
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                Swal.fire('فشل الدخول', 'بيانات الدخول غير صحيحة', 'error');
+                return;
+            }
+
+            // جلب الملف الشخصي لمعرفة الدور
+            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', data.user.id).single();
+            
+            Swal.close();
+
+            if (!profile) {
+                Swal.fire('خطأ', 'الملف الشخصي غير موجود', 'error');
+                return;
+            }
+
+            // إخفاء شاشات الدخول وإظهار لوحة التحكم
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('signup-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+
+            // تخصيص لوحة التحكم حسب الدور
+            document.getElementById('welcome-msg').innerText = 'مرحباً، ' + profile.full_name;
+            
+            let roleText = '';
+            let color = '';
+            if (profile.role === 'admin') { roleText = 'مدير النظام (Admin)'; color = 'var(--accent)'; }
+            else if (profile.role === 'provider') { roleText = 'مزود خدمة (Provider)'; color = 'var(--primary)'; }
+            else { roleText = 'صاحب عمل (User)'; color = '#007bff'; }
+
+            document.getElementById('role-info').innerHTML = `دورك في المنصة: <b style="color:${color}">${roleText}</b>`;
         };
 
-        window.doLogout = async () => { await _supabase.auth.signOut(); location.reload(); };
-
-        window.navTo = function(page) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById('page-' + page).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('nav-' + page).classList.add('active');
-            if (page === 'home') renderHome();
-            if (page === 'wallet') renderWallet();
-            if (page === 'services') renderServices();
-            if (page === 'orders') renderOrders();
-            if (page === 'admin') renderAdmin();
+        // دالة تسجيل الخروج
+        window.doLogout = async function() {
+            await _supabase.auth.signOut();
+            location.reload();
         };
 
-        async function renderHome() {
-            const { data: wallet } = await _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
-            const balance = wallet ? Number(wallet.balance).toFixed(2) : '0.00';
-            let content = `
-                <div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;">
-                    <p style="font-size:14px; opacity:0.9;">مرحباً، ${userProfile.full_name}</p>
-                    <div class="balance" style="color: white; font-size: 28px;">${balance} د.ل</div>
-                </div>
-            `;
-            if (userProfile.role === 'provider') {
-                content += `<button class="btn btn-accent" onclick="window.showAddService()"><i class="fa-solid fa-plus"></i> أضف خدمتك الآن</button>`;
-            } else if (userProfile.role === 'user') {
-                content += `<div class="grid-2">
-                    <button class="btn btn-accent" onclick="window.navTo('wallet')"><i class="fa-solid fa-plus-circle"></i> شحن</button>
-                    <button class="btn btn-primary" onclick="window.navTo('services')"><i class="fa-solid fa-search"></i> طلب خدمة</button>
-                </div>`;
-            } else if (userProfile.role === 'admin') {
-                 content += `<button class="btn btn-accent" onclick="window.navTo('admin')"><i class="fa-solid fa-shield-halved"></i> الدخول للوحة الإدارة</button>`;
-            }
-            document.getElementById('page-home').innerHTML = content;
-        }
-
-        async function renderWallet() {
-            document.getElementById('page-wallet').innerHTML = `<div class="card"><h3 style="color:var(--primary);">المحفظة</h3><p>قريباً: الشحن والسحب.</p></div>`;
-        }
-
-        async function renderServices() {
-            let content = '';
-            if (userProfile.role === 'provider') {
-                content += `<button class="btn btn-accent" onclick="window.showAddService()"><i class="fa-solid fa-plus"></i> إضافة خدمة جديدة</button>`;
-                const { data: myServices } = await _supabase.from('services').select('*').eq('provider_id', currentUser.id);
-                if (myServices && myServices.length > 0) {
-                    myServices.forEach(s => {
-                        content += `<div class="card" style="padding:15px; margin-bottom:10px;">
-                            <strong>${s.title}</strong> - ${s.price} د.ل
-                            <p style="font-size:12px; color:var(--text-muted);">الحالة: ${s.status === 'approved' ? 'معتمدة' : (s.status === 'pending' ? 'قيد المراجعة' : 'مرفوضة')}</p>
-                        </div>`;
-                    });
-                } else { content += `<div class="card"><p style="text-align:center;">لا يوجد خدمات لك بعد.</p></div>`; }
-            } else {
-                const { data: services } = await _supabase.from('services').select('*, profiles(full_name)').eq('status', 'approved');
-                if (services && services.length > 0) {
-                    services.forEach(s => {
-                        content += `<div class="card" style="padding:15px; margin-bottom:10px;">
-                            <h4 style="color:var(--primary); margin-bottom:5px;">${s.title}</h4>
-                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${s.description || ''}</p>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:var(--accent);">${s.price} د.ل</strong>
-                                <button class="btn btn-primary" style="width:auto; padding:6px 12px; font-size:12px;" onclick="window.orderService('${s.id}', '${s.title.replace(/'/g, "\\'")}', ${s.price})">طلب الخدمة</button>
-                            </div>
-                        </div>`;
-                    });
-                } else { content += `<div class="card"><p style="text-align:center;">لا يوجد خدمات متاحة حالياً.</p></div>`; }
-            }
-            document.getElementById('page-services').innerHTML = content;
-        }
-
-        async function renderOrders() {
-            if (userProfile.role === 'provider') {
-                const { data: myServices } = await _supabase.from('services').select('id').eq('provider_id', currentUser.id);
-                const serviceIds = myServices?.map(s => s.id) || [];
-                if (serviceIds.length === 0) {
-                    document.getElementById('page-orders').innerHTML = `<div class="card"><p style="text-align:center;">لا يوجد طلبات على خدماتك بعد.</p></div>`; return;
+        // التحقق من الجلسة عند فتح الصفحة
+        (async function checkSession() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (session) {
+                const { data: profile } = await _supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                if (profile) {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard-screen').classList.remove('hidden');
+                    document.getElementById('welcome-msg').innerText = 'مرحباً، ' + profile.full_name;
+                    
+                    let roleText = profile.role === 'admin' ? 'مدير' : (profile.role === 'provider' ? 'مزود خدمة' : 'صاحب عمل');
+                    document.getElementById('role-info').innerHTML = `دورك في المنصة: <b>${roleText}</b>`;
                 }
-                const { data: orders } = await _supabase.from('orders').select('*, services(title), profiles!orders_client_id_fkey(full_name)').in('service_id', serviceIds).order('created_at', { ascending: false });
-                let content = '';
-                if (orders && orders.length > 0) {
-                    orders.forEach(o => {
-                        content += `<div class="card" style="padding:15px; margin-bottom:10px;">
-                            <strong>${o.services?.title}</strong>
-                            <p style="font-size:12px; color:var(--text-muted);">العميل: ${o.profiles?.full_name || 'غير معروف'}</p>
-                            <p style="color:var(--accent); font-weight:bold;">${o.total_amount} د.ل</p>
-                        </div>`;
-                    });
-                } else { content = `<div class="card"><p style="text-align:center;">لا يوجد طلبات.</p></div>`; }
-                document.getElementById('page-orders').innerHTML = content;
-            } else {
-                const { data: orders } = await _supabase.from('orders').select('*, services(title, profiles(full_name))').eq('client_id', currentUser.id).order('created_at', { ascending: false });
-                let content = '';
-                if (orders && orders.length > 0) {
-                    orders.forEach(o => {
-                        content += `<div class="card" style="padding:15px; margin-bottom:10px;">
-                            <strong>${o.services?.title}</strong>
-                            <p style="font-size:12px; color:var(--text-muted);">المزود: ${o.services?.profiles?.full_name}</p>
-                            <p style="color:var(--accent); font-weight:bold;">${o.total_amount} د.ل</p>
-             
+            }
+        })();
+    </script>
+</body>
+</html>
