@@ -42,14 +42,6 @@
 </head>
 <body>
 
-    <!-- كاشف الأخطاء (سيظهر تنبيه إذا كان هناك خطأ برمجي) -->
-    <script>
-        window.onerror = function(msg, url, line) {
-            alert("حدث خطأ برمجي: " + msg + "\nفي السطر: " + line);
-            return false;
-        };
-    </script>
-
     <div id="auth-container">
         <div id="login-screen" class="container" style="margin-top: 40px;">
             <div class="card" style="text-align:center;">
@@ -57,8 +49,8 @@
                 <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">سجل دخولك</p>
                 <input type="email" id="login-email" placeholder="البريد الإلكتروني">
                 <input type="password" id="login-password" placeholder="كلمة المرور">
-                <button class="btn btn-primary" onclick="window.doLogin()">دخول</button>
-                <a href="#" onclick="window.showSignup(event)" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">أنشئ حساباً جديداً</a>
+                <button id="btn-login" class="btn btn-primary">دخول</button>
+                <a href="#" id="link-to-signup" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">أنشئ حساباً جديداً</a>
             </div>
         </div>
         <div id="signup-screen" class="container hidden" style="margin-top: 30px;">
@@ -72,8 +64,8 @@
                     <option value="user">صاحب عمل (أطلب خدمة)</option>
                     <option value="provider">مزود خدمة (أقدم خدمة)</option>
                 </select>
-                <button class="btn btn-accent" onclick="window.doSignup()">تسجيل</button>
-                <a href="#" onclick="window.showLogin(event)" style="color:var(--primary); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">لديك حساب؟ سجل الدخول</a>
+                <button id="btn-signup" class="btn btn-accent">تسجيل</button>
+                <a href="#" id="link-to-login" style="color:var(--primary); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;">لديك حساب؟ سجل الدخول</a>
             </div>
         </div>
     </div>
@@ -82,9 +74,9 @@
         <div class="header">
             <h1><i class="fa-solid fa-briefcase"></i> خدمات</h1>
             <div style="display:flex; gap:8px; align-items:center;">
-                <button class="theme-toggle" onclick="window.toggleTheme()" id="theme-btn"><i class="fa-solid fa-moon"></i></button>
-                <button class="theme-toggle" onclick="window.showProfile()"><i class="fa-solid fa-user"></i></button>
-                <button class="theme-toggle" onclick="window.doLogout()"><i class="fa-solid fa-power-off"></i></button>
+                <button class="theme-toggle" id="btn-theme"><i class="fa-solid fa-moon"></i></button>
+                <button class="theme-toggle" id="btn-profile"><i class="fa-solid fa-user"></i></button>
+                <button class="theme-toggle" id="btn-logout"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
         <div class="container">
@@ -95,190 +87,207 @@
             <div id="page-admin" class="page hidden"></div>
         </div>
         <div class="bottom-nav">
-            <div class="nav-item active" id="nav-home" onclick="window.navTo('home')"><i class="fa-solid fa-house"></i>الرئيسية</div>
-            <div class="nav-item" id="nav-services" onclick="window.navTo('services')"><i class="fa-solid fa-list-check"></i>الخدمات</div>
-            <div class="nav-item" id="nav-wallet" onclick="window.navTo('wallet')"><i class="fa-solid fa-wallet"></i>المحفظة</div>
-            <div class="nav-item" id="nav-orders" onclick="window.navTo('orders')"><i class="fa-solid fa-clipboard-list"></i>طلباتي</div>
-            <div class="nav-item hidden" id="nav-admin" onclick="window.navTo('admin')"><i class="fa-solid fa-shield-halved"></i>الإدارة</div>
+            <div class="nav-item active" id="nav-home" onclick="window.app.navTo('home')"><i class="fa-solid fa-house"></i>الرئيسية</div>
+            <div class="nav-item" id="nav-services" onclick="window.app.navTo('services')"><i class="fa-solid fa-list-check"></i>الخدمات</div>
+            <div class="nav-item" id="nav-wallet" onclick="window.app.navTo('wallet')"><i class="fa-solid fa-wallet"></i>المحفظة</div>
+            <div class="nav-item" id="nav-orders" onclick="window.app.navTo('orders')"><i class="fa-solid fa-clipboard-list"></i>طلباتي</div>
+            <div class="nav-item hidden" id="nav-admin" onclick="window.app.navTo('admin')"><i class="fa-solid fa-shield-halved"></i>الإدارة</div>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://ggaxlmhzdeczhgyjwyct.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        let currentUser = null, userProfile = null, platformSettings = {};
-
-        (function() {
-            const saved = localStorage.getItem('theme');
-            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme);
-            setTimeout(() => { const b = document.getElementById('theme-btn'); if (b) b.innerHTML = theme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>'; }, 100);
-        })();
-        window.toggleTheme = function() {
-            const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            document.getElementById('theme-btn').innerHTML = next === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+        // كاشف الأخطاء (لإظهار أي خطأ في الكود)
+        window.onerror = function(msg, url, line) {
+            alert("حدث خطأ برمجي: " + msg + "\nفي السطر: " + line);
+            return false;
         };
 
-        window.showSignup = (e) => { e.preventDefault(); document.getElementById('login-screen').classList.add('hidden'); document.getElementById('signup-screen').classList.remove('hidden'); };
-        window.showLogin = (e) => { e.preventDefault(); document.getElementById('signup-screen').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); };
+        window.app = {}; // مساحة آمنة للدوال
 
-        window.doSignup = async function() {
-            const n = document.getElementById('signup-name').value.trim();
-            const e = document.getElementById('signup-email').value.trim();
-            const p = document.getElementById('signup-phone').value.trim();
-            const pw = document.getElementById('signup-password').value;
-            const r = document.getElementById('signup-role').value;
-            if (!n || !e || !p || !pw) return Swal.fire('تنبيه', 'ملء جميع الحقول', 'warning');
-            Swal.fire({ title: 'جاري الإنشاء...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            const { error } = await _supabase.auth.signUp({ email: e, password: pw, options: { data: { full_name: n, role: r, phone: p } } });
-            if (error) return Swal.fire('خطأ', error.message, 'error');
-            Swal.fire('تم', 'تم الإنشاء! سجل الدخول الآن', 'success');
-            window.showLogin(new Event('click'));
-        };
-
-        window.doLogin = async function() {
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            if (!email || !password) return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
-            Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        document.addEventListener('DOMContentLoaded', () => {
+            const SUPABASE_URL = 'https://ggaxlmhzdeczhgyjwyct.supabase.co';
+            const SUPABASE_ANON_KEY = 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI';
+            const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-            if (error) return Swal.fire('فشل الدخول', 'بيانات غير صحيحة', 'error');
+            let currentUser = null, userProfile = null, platformSettings = {};
 
-            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', data.user.id).single();
-            const { data: settings } = await _supabase.from('platform_settings').select('*').eq('id', 1).single();
-            
-            Swal.close();
-            if (!profile) return Swal.fire('خطأ', 'الملف الشخصي غير موجود', 'error');
+            // التبديل بين الشاشات
+            document.getElementById('link-to-signup').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('signup-screen').classList.remove('hidden');
+            });
 
-            currentUser = data.user;
-            userProfile = profile;
-            platformSettings = settings || {};
+            document.getElementById('link-to-login').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('signup-screen').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
+            });
 
-            document.getElementById('auth-container').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
+            // دالة الوضع الليلي
+            const themeBtn = document.getElementById('btn-theme');
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
 
-            document.getElementById('nav-admin').classList.add('hidden');
-            document.getElementById('nav-services').classList.remove('hidden');
-            document.getElementById('nav-orders').classList.remove('hidden');
+            themeBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const next = isDark ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                themeBtn.innerHTML = next === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+            });
 
-            if (profile.role === 'admin') {
-                document.getElementById('nav-admin').classList.remove('hidden');
-                document.getElementById('nav-services').classList.add('hidden');
-                document.getElementById('nav-orders').classList.add('hidden');
-            } else if (profile.role === 'provider') {
-                document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-briefcase"></i>خدماتي';
-            } else {
-                document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-clipboard-list"></i>طلباتي';
+            // دالة تسجيل حساب جديد
+            document.getElementById('btn-signup').addEventListener('click', async () => {
+                const n = document.getElementById('signup-name').value.trim();
+                const e = document.getElementById('signup-email').value.trim();
+                const p = document.getElementById('signup-phone').value.trim();
+                const pw = document.getElementById('signup-password').value;
+                const r = document.getElementById('signup-role').value;
+                if (!n || !e || !p || !pw) return Swal.fire('تنبيه', 'ملء جميع الحقول', 'warning');
+                
+                Swal.fire({ title: 'جاري الإنشاء...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const { error } = await _supabase.auth.signUp({ email: e, password: pw, options: { data: { full_name: n, role: r, phone: p } } });
+                if (error) return Swal.fire('خطأ', error.message, 'error');
+                
+                Swal.fire('تم', 'تم الإنشاء! سجل الدخول الآن', 'success');
+                document.getElementById('signup-screen').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
+            });
+
+            // دالة تسجيل الدخول
+            document.getElementById('btn-login').addEventListener('click', async () => {
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                if (!email || !password) return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
+                
+                Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+                
+                if (error) {
+                    Swal.close();
+                    return Swal.fire('فشل الدخول', 'بيانات غير صحيحة: ' + error.message, 'error');
+                }
+
+                const { data: profile } = await _supabase.from('profiles').select('*').eq('id', data.user.id).single();
+                const { data: settings } = await _supabase.from('platform_settings').select('*').eq('id', 1).single();
+                
+                Swal.close();
+                if (!profile) return Swal.fire('خطأ', 'الملف الشخصي غير موجود', 'error');
+
+                currentUser = data.user;
+                userProfile = profile;
+                platformSettings = settings || {};
+
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+
+                document.getElementById('nav-admin').classList.add('hidden');
+                document.getElementById('nav-services').classList.remove('hidden');
+                document.getElementById('nav-orders').classList.remove('hidden');
+
+                if (profile.role === 'admin') {
+                    document.getElementById('nav-admin').classList.remove('hidden');
+                    document.getElementById('nav-services').classList.add('hidden');
+                    document.getElementById('nav-orders').classList.add('hidden');
+                } else if (profile.role === 'provider') {
+                    document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-briefcase"></i>خدماتي';
+                } else {
+                    document.getElementById('nav-orders').innerHTML = '<i class="fa-solid fa-clipboard-list"></i>طلباتي';
+                }
+
+                window.app.navTo('home');
+            });
+
+            // دالة تسجيل الخروج
+            document.getElementById('btn-logout').addEventListener('click', async () => {
+                await _supabase.auth.signOut();
+                location.reload();
+            });
+
+            // دالة الملف الشخصي
+            document.getElementById('btn-profile').addEventListener('click', () => {
+                if (!userProfile) return;
+                Swal.fire({
+                    title: 'الملف الشخصي',
+                    html: `<p>الاسم: <b>${userProfile.full_name}</b></p>
+                           <p>الهاتف: <b>${userProfile.phone || 'غير محدد'}</b></p>
+                           <p>الدور: <b>${userProfile.role === 'admin' ? 'مدير' : (userProfile.role === 'provider' ? 'مزود' : 'مستخدم')}</b></p>`,
+                    confirmButtonText: 'إغلاق'
+                });
+            });
+
+            // التنقل بين الصفحات
+            window.app.navTo = (page) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+                document.getElementById('page-' + page).classList.remove('hidden');
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.getElementById('nav-' + page).classList.add('active');
+                
+                if (page === 'home') renderHome();
+                if (page === 'wallet') renderWallet();
+                if (page === 'services') renderServices();
+                if (page === 'orders') renderOrders();
+                if (page === 'admin') renderAdmin();
+            };
+
+            // عرض الصفحة الرئيسية
+            async function renderHome() {
+                const { data: w } = await _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+                const bal = w ? Number(w.balance).toFixed(2) : '0.00';
+                let c = `
+                    <div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;">
+                        <p style="font-size:13px; opacity:0.9;">مرحباً، ${userProfile.full_name}</p>
+                        <div class="balance" style="color:white;">${bal} <span style="font-size:16px;">د.ل</span></div>
+                    </div>`;
+                if (userProfile.role === 'provider') {
+                    c += `<button class="btn btn-accent" onclick="window.app.showAddService()"><i class="fa-solid fa-plus"></i> أضف خدمتك</button>`;
+                } else if (userProfile.role === 'user') {
+                    c += `<div class="grid-2">
+                        <button class="btn btn-accent" onclick="window.app.navTo('wallet')"><i class="fa-solid fa-plus-circle"></i> شحن</button>
+                        <button class="btn btn-primary" onclick="window.app.navTo('services')"><i class="fa-solid fa-search"></i> طلب خدمة</button>
+                    </div>`;
+                } else if (userProfile.role === 'admin') {
+                    c += `<button class="btn btn-accent" onclick="window.app.navTo('admin')"><i class="fa-solid fa-shield-halved"></i> لوحة الإدارة</button>`;
+                }
+                document.getElementById('page-home').innerHTML = c;
             }
 
-            window.navTo('home');
-        };
-
-        window.doLogout = async () => { await _supabase.auth.signOut(); location.reload(); };
-
-        window.navTo = function(page) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById('page-' + page).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('nav-' + page).classList.add('active');
-            if (page === 'home') renderHome();
-            if (page === 'wallet') renderWallet();
-            if (page === 'services') renderServices();
-            if (page === 'orders') renderOrders();
-            if (page === 'admin') renderAdmin();
-        };
-
-        async function renderHome() {
-            const { data: w } = await _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
-            const bal = w ? Number(w.balance).toFixed(2) : '0.00';
-            let c = `
-                <div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;">
-                    <p style="font-size:13px; opacity:0.9;">مرحباً، ${userProfile.full_name}</p>
-                    <div class="balance" style="color:white;">${bal} <span style="font-size:16px;">د.ل</span></div>
-                </div>`;
-            if (userProfile.role === 'provider') {
-                c += `<button class="btn btn-accent" onclick="window.showAddService()"><i class="fa-solid fa-plus"></i> أضف خدمتك</button>`;
-            } else if (userProfile.role === 'user') {
-                c += `<div class="grid-2">
-                    <button class="btn btn-accent" onclick="window.navTo('wallet')"><i class="fa-solid fa-plus-circle"></i> شحن</button>
-                    <button class="btn btn-primary" onclick="window.navTo('services')"><i class="fa-solid fa-search"></i> طلب خدمة</button>
-                </div>`;
-            } else if (userProfile.role === 'admin') {
-                c += `<button class="btn btn-accent" onclick="window.navTo('admin')"><i class="fa-solid fa-shield-halved"></i> لوحة الإدارة</button>`;
-            }
-            document.getElementById('page-home').innerHTML = c;
-        }
-
-        async function renderWallet() {
-            document.getElementById('page-wallet').innerHTML = `
-                <div class="card">
-                    <div class="tabs">
-                        <div class="tab active" onclick="window.switchTab(this, 'w-card')">بطاقة شحن</div>
-                        <div class="tab" onclick="window.switchTab(this, 'w-bank')">تحويل بنكي</div>
-                        <div class="tab" onclick="window.switchTab(this, 'w-with')">سحب</div>
-                        <div class="tab" onclick="window.switchTab(this, 'w-trans')">تحويل</div>
-                    </div>
-                    <div id="w-card">
-                        <input type="text" id="card-code" placeholder="أدخل كود البطاقة">
-                        <button class="btn btn-primary" onclick="window.redeemCard()">تأكيد</button>
-                    </div>
-                    <div id="w-bank" class="hidden">
-                        <div class="bank-details">
-                            <p><span>المصرف:</span> ${platformSettings.bank_name || 'غير محدد'}</p>
-                            <p><span>الاسم:</span> ${platformSettings.account_name || 'غير محدد'}</p>
-                            <p><span>الحساب:</span> ${platformSettings.account_number || 'غير محدد'}</p>
-                            <p><span>IBAN:</span> ${platformSettings.iban || 'غير محدد'}</p>
+            // عرض المحفظة
+            async function renderWallet() {
+                document.getElementById('page-wallet').innerHTML = `
+                    <div class="card">
+                        <div class="tabs">
+                            <div class="tab active" onclick="window.app.switchTab(this, 'w-card')">بطاقة شحن</div>
+                            <div class="tab" onclick="window.app.switchTab(this, 'w-bank')">تحويل بنكي</div>
+                            <div class="tab" onclick="window.app.switchTab(this, 'w-with')">سحب</div>
+                            <div class="tab" onclick="window.app.switchTab(this, 'w-trans')">تحويل</div>
                         </div>
-                        <input type="number" id="bank-amt" placeholder="المبلغ المحول">
-                        <input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);">
-                        <button class="btn btn-accent" onclick="window.submitBankTransfer()">إرسال للمراجعة</button>
-                    </div>
-                    <div id="w-with" class="hidden">
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">يتم السحب بعد موافقة الإدارة.</p>
-                        <input type="number" id="with-amt" placeholder="المبلغ">
-                        <input type="text" id="with-bank" placeholder="اسم المصرف">
-                        <input type="text" id="with-acc" placeholder="رقم الحساب">
-                        <button class="btn btn-primary" onclick="window.requestWithdrawal()">إرسال</button>
-                    </div>
-                    <div id="w-trans" class="hidden">
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">حول فوراً عبر رقم هاتف المستخدم.</p>
-                        <input type="text" id="trans-phone" placeholder="رقم الهاتف">
-                        <button class="btn btn-accent" onclick="window.searchPhone()">بحث</button>
-                        <div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
-                        <input type="number" id="trans-amt" placeholder="المبلغ">
-                        <button class="btn btn-primary" onclick="window.executeTransfer()">تحويل الآن</button>
-                    </div>
-                </div>`;
-        }
-
-        window.switchTab = function(el, id) {
-            el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            ['w-card', 'w-bank', 'w-with', 'w-trans'].forEach(x => document.getElementById(x)?.classList.add('hidden'));
-            document.getElementById(id)?.classList.remove('hidden');
-        };
-
-        window.redeemCard = async function() {
-            const code = document.getElementById('card-code').value.trim();
-            if (!code) return Swal.fire('تنبيه', 'أدخل الكود', 'warning');
-            Swal.fire({ title: 'جاري التحقق...', didOpen: () => Swal.showLoading() });
-            const { data, error } = await _supabase.rpc('redeem_card', { card_code: code });
-            if (error || !data.success) return Swal.fire('خطأ', error ? 'فشل الاتصال' : data.message, 'error');
-            Swal.fire('تم', data.message, 'success');
-            if (data.amount >= 1000) await _supabase.rpc('notify_admins', { p_title: 'شحن كبير', p_message: `${userProfile.full_name} شحن ${data.amount} د.ل` });
-            renderWallet();
-        };
-
-        window.submitBankTransfer = async function() {
-            const amount = parseFloat(document.getElementById('bank-amt').value);
-            const file = document.getElementById('bank-file').files[0];
-            if (!amount || !file) return Swal.fire('تنبيه', 'أدخل المبلغ والملف', 'warning');
-            Swal.fire({ title: 'جاري الرفع...', didOpen: () => Swal.showLoading() });
-            const fileName = `${Date.now()}_${currentUser.id}.${file.name.split('.').pop()}`;
-            const { error: upErr } = await _supabase.storage.from('receipts').upload(fileName, file);
-            
+                        <div id="w-card">
+                            <input type="text" id="card-code" placeholder="أدخل كود البطاقة">
+                            <button class="btn btn-primary" onclick="window.app.redeemCard()">تأكيد</button>
+                        </div>
+                        <div id="w-bank" class="hidden">
+                            <div class="bank-details">
+                                <p><span>المصرف:</span> ${platformSettings.bank_name || 'غير محدد'}</p>
+                                <p><span>الاسم:</span> ${platformSettings.account_name || 'غير محدد'}</p>
+                                <p><span>الحساب:</span> ${platformSettings.account_number || 'غير محدد'}</p>
+                                <p><span>IBAN:</span> ${platformSettings.iban || 'غير محدد'}</p>
+                            </div>
+                            <input type="number" id="bank-amt" placeholder="المبلغ المحول">
+                            <input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);">
+                            <button class="btn btn-accent" onclick="window.app.submitBankTransfer()">إرسال للمراجعة</button>
+                        </div>
+                        <div id="w-with" class="hidden">
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">يتم السحب بعد موافقة الإدارة.</p>
+                            <input type="number" id="with-amt" placeholder="المبلغ">
+                            <input type="text" id="with-bank" placeholder="اسم المصرف">
+                            <input type="text" id="with-acc" placeholder="رقم الحساب">
+                            <button class="btn btn-primary" onclick="window.app.requestWithdrawal()">إرسال</button>
+                        </div>
+                        <div id="w-trans" class="hidden">
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">حول فوراً عبر رقم هاتف المستخدم.</p>
+                            <input type="text" id="trans-phone" placeholder="رقم الهاتف">
+                            <button class="btn btn-accent" onclick="window.app.searchPhone()">بحث</button>
+                            <div id="trans-result" style="font-weight:bold; color:var(--primary);
