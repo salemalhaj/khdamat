@@ -86,7 +86,12 @@ function navTo(page) {
     document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
     document.getElementById('nav-' + page).classList.add('active');
     
-    if (page === 'home') document.getElementById('page-home').innerHTML = '<div class="card" style="text-align:center; padding: 40px 20px;"><h2 style="color:var(--primary); margin-bottom:10px;">أهلاً بك يا ' + userProfile.full_name + '</h2><p style="color:var(--text-muted);">مرحباً بك في منصة خدمات.</p></div>';
+    if (page === 'home') {
+        document.getElementById('page-home').innerHTML = '<div class="card" style="text-align:center; padding: 40px 20px;"><h2 style="color:var(--primary); margin-bottom:10px;">أهلاً بك يا ' + userProfile.full_name + '</h2><p style="color:var(--text-muted);">مرحباً بك في منصة خدمات.</p></div>';
+    } else {
+        document.getElementById('page-' + page).innerHTML = '<div class="card"><h2>هذه صفحة ' + page + '</h2><p>سنبني هذه الصفحة في الخطوة القادمة.</p></div>';
+    }
+}
 
 function doLogout() { _supabase.auth.signOut(); location.reload(); }
 function showProfile() { Swal.fire({ title: 'الملف الشخصي', html: '<p>الاسم: ' + userProfile.full_name + '</p><p>الدور: ' + userProfile.role + '</p>', confirmButtonText: 'إغلاق' }); }
