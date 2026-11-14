@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
 <body style="text-align:center; padding:20px; font-family:sans-serif;">
-    <h2>اختبار الاتصال بقاعدة البيانات</h2>
-    <button onclick="checkDB()" style="padding:10px 20px; font-size:16px;">اضغط هنا للفحص</button>
+    <h2>اختبار الاتصال المباشر (بدون مكتبات)</h2>
+    <button onclick="checkDB()" style="padding:10px 20px; font-size:16px;">اضغط للفحص</button>
     <h3 id="res" style="color: blue;">...</h3>
     <script>
-        async function checkDB() {
+        function checkDB() {
             document.getElementById('res').innerText = 'جاري الاتصال...';
-            const supabase = supabase.createClient('https://ggaxlmhzdeczhgyjwyct.supabase.co', 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI');
-            const { data, error } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
-            
-            if (error) {
+            fetch('https://ggaxlmhzdeczhgyjwyct.supabase.co/rest/v1/platform_settings?select=*', {
+                headers: {
+                    'apikey': 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI',
+                    'Authorization': 'Bearer sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('res').style.color = 'green';
+                document.getElementById('res').innerText = '✅ نجح الاتصال! بيانات المصرف: ' + (data[0] ? data[0].bank_name : 'فارغ');
+            })
+            .catch(error => {
                 document.getElementById('res').style.color = 'red';
                 document.getElementById('res').innerText = '❌ فشل الاتصال: ' + error.message;
-            } else {
-                document.getElementById('res').style.color = 'green';
-                document.getElementById('res').innerText = '✅ الاتصال ناجح! المصرف: ' + data.bank_name;
-            }
+            });
         }
     </script>
 </body>
