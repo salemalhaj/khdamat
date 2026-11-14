@@ -51,3 +51,73 @@ function doSignup() {
         document.getElementById('login-screen').classList.remove('hidden');
     });
          }
+function doLogin() {
+    var email = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+    if (!email || !password) return Swal.fire('تنبيه', 'أدخل البريد وكلمة المرور', 'warning');
+    
+    Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    _supabase.auth.signInWithPassword({ email: email, password: password }).then(function(res) {
+        if (res.error) { Swal.fire('فشل الدخول', 'بيانات غير صحيحة', 'error'); return; }
+        
+        _supabase.from('profiles').select('*').eq('id', res.data.user.id).maybeSingle().then(function(pRes) {
+            Swal.close();
+            if (!pRes.data) { Swal.fire('خطأ', 'الملف الشخصي غير موجود', 'error'); return; }
+            
+            currentUser = res.data.user;
+            userProfile = pRes.data;
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            if (userProfile.role === 'admin') {
+                document.getElementById('nav-admin').classList.remove('hidden');
+                document.getElementById('nav-services').classList.add('hidden');
+                document.getElementById('nav-orders').classList.add('hidden');
+            }
+            navTo('home');
+        });
+    });
+}
+
+function navTo(page) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.add('hidden'); });
+    document.getElementById('page-' + page).classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+    document.getElementById('nav-' + page).classList.add('active');
+    
+    if (page === 'home') {
+        document.getElementById('page-home').innerHTML = '<div class="card" style="text-align:center; padding: 40px 20px;"><h2 style="color:var(--primary); margin-bottom:10px;">أهلاً بك يا ' + userProfile.full_name + '</h2><p style="color:var(--text-muted);">مرحباً بك في منصة خدمات.</p></div>';
+    } else {
+        document.getElementById('page-' + page).innerHTML = '<div class="card"><h2>هذه صفحة ' + page + '</h2><p>سنبني هذه الصفحة في الخطوة القادمة.</p></div>';
+    }
+}
+
+function doLogout() { _supabase.auth.signOut(); location.reload(); }
+function showProfile() { Swal.fire({ title: 'الملف الشخصي', html: '<p>الاسم: ' + userProfile.full_name + '</p><p>الدور: ' + userProfile.role + '</p>', confirmButtonText: 'إغلاق' }); }
+
+document.addEventListener('DOMContentLoaded', function() {
+    var savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    applyTranslations();
+
+    var btnLogin = document.getElementById('btn-do-login');
+    if (btnLogin) btnLogin.addEventListener('click', doLogin);
+    var btnSignup = document.getElementById('btn-do-signup');
+    if (btnSignup) btnSignup.addEventListener('click', doSignup);
+    var linkSignup = document.getElementById('link-to-signup');
+    if (linkSignup) linkSignup.addEventListener('click', showSignup);
+    var linkLogin = document.getElementById('link-to-login');
+    if (linkLogin) linkLogin.addEventListener('click', showLogin);
+    var btnLangTop = document.getElementById('btn-lang-top');
+    if (btnLangTop) btnLangTop.addEventListener('click', toggleLanguage);
+    var btnThemeTop = document.getElementById('btn-theme-top');
+    if (btnThemeTop) btnThemeTop.addEventListener('click', toggleTheme);
+    var btnLangMain = document.getElementById('btn-lang-main');
+    if (btnLangMain) btnLangMain.addEventListener('click', toggleLanguage);
+    var btnThemeMain = document.getElementById('btn-theme-main');
+    if (btnThemeMain) btnThemeMain.addEventListener('click', toggleTheme);
+    var btnProfile = document.getElementById('btn-profile');
+    if (btnProfile) btnProfile.addEventListener('click', showProfile);
+    var btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) btnLogout.addEventListener('click', doLogout);
+});
