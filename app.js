@@ -1,4 +1,6 @@
+alert("✅ ملف الأكواد (app.js) يعمل!");
 var _supabase = supabase.createClient('https://ggaxlmhzdeczhgyjwyct.supabase.co', 'sb_publishable_Dy1TLIvbtiEEJM89KY9JzQ_eip7fCUI');
+alert("✅ تم الاتصال بمكتبة Supabase!");
 var currentLang = localStorage.getItem('lang') || 'ar';
 var currentUser = null, userProfile = null, platformSettings = {};
 
