@@ -3,7 +3,7 @@ var currentLang = localStorage.getItem('lang') || 'ar';
 var currentUser = null, userProfile = null, platformSettings = {};
 
 var translations = {
-    ar: { app_name: "منصة خدمات", app_name_short: "خدمات", login_title: "سجل دخولك", email: "البريد الإلكتروني", password: "كلمة المرور", login_btn: "دخول", create_acc: "أنشئ حساباً جديداً", signup_title: "حساب جديد", full_name: "الاسم الكامل", phone: "رقم الهاتف", role_user: "صاحب عمل", role_provider: "مزود خدمة", signup_btn: "تسجيل", have_acc: "لديك حساب؟ سجل الدخول", nav_home: "الرئيسية", nav_services: "الخدمات", nav_wallet: "المحفظة", nav_orders: "طلباتي", nav_my_services: "خدماتي", nav_admin: "الإدارة", welcome: "مرحباً، ", balance_title: "رصيد محفظتك", currency: "د.ل", deposit: "شحن", request_service: "طلب خدمة", add_service: "أضف خدمتك", admin_panel_btn: "لوحة الإدارة", tab_card: "بطاقة شحن", tab_bank: "تحويل بنكي", tab_withdraw: "سحب", tab_transfer: "تحويل", card_code: "أدخل كود البطاقة", confirm: "تأكيد", bank: "المصرف", name: "الاسم", account: "الحساب", transfer_amt: "المبلغ المحول", send_review: "إرسال للمراجعة", withdraw_note: "يتم السحب بعد موافقة الإدارة.", amount: "المبلغ", bank_name: "اسم المصرف", acc_num: "رقم الحساب", send: "إرسال", transfer_note: "حول فوراً عبر رقم هاتف المستخدم.", search: "بحث", transfer_now: "تحويل الآن", services_title: "الخدمات", new_service: "خدمة جديدة", status: "الحالة", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", no_services: "لا يوجد خدمات.", no_services_avail: "لا يوجد خدمات متاحة.", request: "طلب", add_service_title: "إضافة خدمة", price: "السعر", desc: "الوصف", cancel: "إلغاء", orders_title: "طلباتي", no_orders: "لا يوجد طلبات.", admin_title: "الإدارة", users: "المستخدمون", total_money: "إجمالي الأموال", withdrawals: "سحب", transfers: "تحويلات", cards: "بطاقات", approve: "موافقة", reject: "رفض", view_receipt: "عرض الإيصال", generate: "توليد", card_value: "قيمة البطاقة", count: "العدد", alert: "تنبيه", error: "خطأ", success: "تم", fill_fields: "ملء جميع الحقول", login_failed: "فشل الدخول", invalid_creds: "البريد الإلكتروني غير مؤكد، أو كلمة المرور خاطئة", profile_not_found: "الملف الشخصي غير موجود", creating: "جاري الإنشاء...", created_login: "تم إنشاء الحساب! يرجى تفقد بريدك الإلكتروني لتأكيد الحساب، ثم قم بتسجيل الدخول.", verifying: "جاري التحقق...", sending: "جاري الإرسال...", uploading: "جاري الرفع...", request_sent: "تم إرسال الطلب", upload_failed: "فشل رفع الملف", number_not_found: "رقم غير موجود", transferring: "جاري التحويل...", transfer_success: "تم التحويل بنجاح", insufficient_balance: "رصيد غير كافٍ", top_up: "اشحن محفظتك", confirm_order: "تأكيد", deduct_for: "خصم {amount} لطلب {title}؟", yes: "نعم", ordering: "جاري الطلب...", order_success: "تم الطلب بنجاح", loading: "جاري التحميل...", generating: "جاري التوليد...", generated: "تم التوليد", reject_reason: "سبب الرفض", rejected_msg: "تم الرفض", approved_msg: "تمت الموافقة", bal_insufficient: "الرصيد غير كافٍ", added_msg: "تمت الإضافة", profile: "الملف الشخصي", role: "الدور", role_admin: "مدير", role_provider: "مزود", role_user: "مستخدم", close: "إغلاق", card_redeemed: "تم شحن البطاقة بنجاح!", card_error: "البطاقة غير صالحة أو مستخدمة" },
+    ar: { app_name: "منصة خدمات", app_name_short: "خدمات", login_title: "سجل دخولك", email: "البريد الإلكتروني", password: "كلمة المرور", login_btn: "دخول", create_acc: "أنشئ حساباً جديداً", signup_title: "حساب جديد", full_name: "الاسم الكامل", phone: "رقم الهاتف", role_user: "صاحب عمل", role_provider: "مزود خدمة", signup_btn: "تسجيل", have_acc: "لديك حساب؟ سجل الدخول", nav_home: "الرئيسية", nav_services: "الخدمات", nav_wallet: "المحفظة", nav_orders: "طلباتي", nav_messages: "الرسائل", nav_my_services: "خدماتي", nav_admin: "الإدارة", welcome: "مرحباً، ", balance_title: "رصيد محفظتك", currency: "د.ل", deposit: "شحن", request_service: "طلب خدمة", add_service: "أضف خدمتك", admin_panel_btn: "لوحة الإدارة", tab_card: "بطاقة شحن", tab_bank: "تحويل بنكي", tab_withdraw: "سحب", tab_transfer: "تحويل", card_code: "أدخل كود البطاقة", confirm: "تأكيد", bank: "المصرف", name: "الاسم", account: "الحساب", transfer_amt: "المبلغ المحول", send_review: "إرسال للمراجعة", withdraw_note: "يتم السحب بعد موافقة الإدارة.", amount: "المبلغ", bank_name: "اسم المصرف", acc_num: "رقم الحساب", send: "إرسال", transfer_note: "حول فوراً عبر رقم هاتف المستخدم.", search: "بحث", transfer_now: "تحويل الآن", services_title: "الخدمات", new_service: "خدمة جديدة", status: "الحالة", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", no_services: "لا يوجد خدمات.", no_services_avail: "لا يوجد خدمات متاحة.", request: "طلب", add_service_title: "إضافة خدمة", price: "السعر", desc: "الوصف", cancel: "إلغاء", orders_title: "طلباتي", no_orders: "لا يوجد طلبات.", admin_title: "الإدارة", users: "المستخدمون", total_money: "إجمالي الأموال", withdrawals: "سحب", transfers: "تحويلات", cards: "بطاقات", approve: "موافقة", reject: "رفض", view_receipt: "عرض الإيصال", generate: "توليد", card_value: "قيمة البطاقة", count: "العدد", alert: "تنبيه", error: "خطأ", success: "تم", fill_fields: "ملء جميع الحقول", login_failed: "فشل الدخول", invalid_creds: "البريد الإلكتروني غير مؤكد، أو كلمة المرور خاطئة", profile_not_found: "الملف الشخصي غير موجود", creating: "جاري الإنشاء...", created_login: "تم إنشاء الحساب! يرجى تفقد بريدك الإلكتروني لتأكيد الحساب، ثم قم بتسجيل الدخول.", verifying: "جاري التحقق...", sending: "جاري الإرسال...", uploading: "جاري الرفع...", request_sent: "تم إرسال الطلب", upload_failed: "فشل رفع الملف", number_not_found: "رقم غير موجود", transferring: "جاري التحويل...", transfer_success: "تم التحويل بنجاح", insufficient_balance: "رصيد غير كافٍ", top_up: "اشحن محفظتك", confirm_order: "تأكيد", deduct_for: "خصم {amount} لطلب {title}؟", yes: "نعم", ordering: "جاري الطلب...", order_success: "تم الطلب بنجاح", loading: "جاري التحميل...", generating: "جاري التوليد...", generated: "تم التوليد", reject_reason: "سبب الرفض", rejected_msg: "تم الرفض", approved_msg: "تمت الموافقة", bal_insufficient: "الرصيد غير كافٍ", added_msg: "تمت الإضافة", profile: "الملف الشخصي", role: "الدور", role_admin: "مدير", role_provider: "مزود", role_user: "مستخدم", close: "إغلاق", card_redeemed: "تم شحن البطاقة بنجاح!", card_error: "البطاقة غير صالحة أو مستخدمة" },
     en: { app_name: "Khdamat", app_name_short: "Khdamat", login_title: "Login", email: "Email", password: "Password", login_btn: "Login", create_acc: "Create Account", signup_title: "New Account", full_name: "Full Name", phone: "Phone", role_user: "Client", role_provider: "Provider", signup_btn: "Sign Up", have_acc: "Have an account? Login", nav_home: "Home", nav_services: "Services", nav_wallet: "Wallet", nav_orders: "Orders", nav_my_services: "My Services", nav_admin: "Admin", welcome: "Welcome, ", balance_title: "Wallet Balance", currency: "LYD", deposit: "Deposit", request_service: "Request Service", add_service: "Add your service", admin_panel_btn: "Admin Panel", tab_card: "Recharge Card", tab_bank: "Bank Transfer", tab_withdraw: "Withdraw", tab_transfer: "Transfer", card_code: "Enter card code", confirm: "Confirm", bank: "Bank", name: "Name", account: "Account", transfer_amt: "Amount", send_review: "Send for Review", withdraw_note: "Requires admin approval.", amount: "Amount", bank_name: "Bank Name", acc_num: "Account Number", send: "Send", transfer_note: "Transfer via phone number.", search: "Search", transfer_now: "Transfer Now", services_title: "Services", new_service: "New Service", status: "Status", approved: "Approved", pending: "Pending", rejected: "Rejected", no_services: "No services found.", no_services_avail: "No services available.", request: "Request", add_service_title: "Add Service", price: "Price", desc: "Description", cancel: "Cancel", orders_title: "My Orders", no_orders: "No orders found.", admin_title: "Admin Panel", users: "Users", total_money: "Total Money", withdrawals: "Withdrawals", transfers: "Transfers", cards: "Cards", approve: "Approve", reject: "Reject", view_receipt: "View Receipt", generate: "Generate", card_value: "Card Value", count: "Count", alert: "Alert", error: "Error", success: "Done", fill_fields: "Please fill all fields", login_failed: "Login Failed", invalid_creds: "Invalid credentials", profile_not_found: "Profile not found", creating: "Creating...", created_login: "Created! Login now", verifying: "Verifying...", sending: "Sending...", uploading: "Uploading...", request_sent: "Request sent", upload_failed: "Upload failed", number_not_found: "Number not found", transferring: "Transferring...", transfer_success: "Transferred!", insufficient_balance: "Insufficient balance", top_up: "Top up your wallet", confirm_order: "Confirm", deduct_for: "Deduct {amount} for {title}?", yes: "Yes", ordering: "Ordering...", order_success: "Order successful", loading: "Loading...", generating: "Generating...", generated: "Generated!", reject_reason: "Rejection reason", rejected_msg: "Rejected", approved_msg: "Approved", bal_insufficient: "Insufficient balance", added_msg: "Added!", profile: "Profile", role: "Role", role_admin: "Admin", role_provider: "Provider", role_user: "User", close: "Close", card_redeemed: "Card redeemed!", card_error: "Invalid or used card" }
 };
 
@@ -116,6 +116,7 @@ function navTo(page) {
     if (page === 'wallet') renderWallet();
     if (page === 'services') renderServices();
     if (page === 'orders') renderOrders();
+    if (page === 'messages') renderMessages();
     if (page === 'admin') renderAdmin();
 }
 
@@ -421,6 +422,87 @@ function checkSession() {
                     });
                 }
             });
+        }
+    });
+}
+
+function renderMessages() {
+    document.getElementById('page-messages').innerHTML = '<div class="card"><p>جاري تحميل جهات الاتصال...</p></div>';
+    _supabase.from('profiles').select('id, full_name, role').neq('id', currentUser.id).then(function(res) {
+        var c = '<h2 style="color:var(--primary); margin-bottom:15px;">اختر مستخدماً للمحادثة</h2>';
+        if (res.data && res.data.length > 0) {
+            res.data.forEach(function(user) {
+                c += '<div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
+                     '<div><strong>' + user.full_name + '</strong><br><small style="color:var(--text-muted);">' + (user.role === 'provider' ? 'مزود خدمة' : 'مستخدم') + '</small></div>' +
+                     '<button class="btn btn-primary btn-sm" onclick="openChat(\'' + user.id + '\', \'' + user.full_name + '\')"><i class="fa-solid fa-comment"></i> محادثة</button>' +
+                     '</div>';
+            });
+        } else {
+            c += '<div class="card"><p style="text-align:center;">لا يوجد مستخدمون آخرون.</p></div>';
+        }
+        document.getElementById('page-messages').innerHTML = c;
+    });
+}
+
+var currentChatUserId = null;
+var chatInterval = null;
+
+function openChat(userId, userName) {
+    currentChatUserId = userId;
+    Swal.fire({
+        title: 'محادثة مع ' + userName,
+        html: '<div id="chat-box" style="height:250px; overflow-y:auto; border:1px solid #ddd; border-radius:8px; padding:10px; margin-bottom:10px; background:#f9f9f9; text-align:right;"></div>' +
+              '<input id="chat-input" class="swal2-input" placeholder="اكتب رسالتك هنا..." style="margin-bottom:10px;">' +
+              '<button class="btn btn-primary" onclick="sendChatMessage()" style="margin-top:0;">إرسال</button>',
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: function() {
+            loadChatMessages();
+            chatInterval = setInterval(loadChatMessages, 3000);
+        },
+        willClose: function() {
+            clearInterval(chatInterval);
+            currentChatUserId = null;
+        }
+    });
+}
+
+function loadChatMessages() {
+    if (!currentChatUserId) return;
+    _supabase.from('messages').select('*')
+    .or('and(sender_id.eq.' + currentUser.id + ',receiver_id.eq.' + currentChatUserId + '),and(sender_id.eq.' + currentChatUserId + ',receiver_id.eq.' + currentUser.id + ')')
+    .order('created_at', { ascending: true })
+    .then(function(res) {
+        var box = document.getElementById('chat-box');
+        if (!box) return;
+        var html = '';
+        if (res.data) {
+            res.data.forEach(function(m) {
+                var isMe = m.sender_id === currentUser.id;
+                html += '<div style="margin-bottom:8px; text-align:' + (isMe ? 'left' : 'right') + ';">' +
+                        '<span style="display:inline-block; padding:8px 12px; border-radius:10px; background:' + (isMe ? '#dcf8c6' : '#fff') + '; border:1px solid #eee; max-width:80%; font-size:14px;">' + m.message + '</span>' +
+                        '</div>';
+            });
+        }
+        box.innerHTML = html || '<p style="text-align:center; color:#999; font-size:12px;">لا توجد رسائل سابقة. ابدأ المحادثة!</p>';
+        box.scrollTop = box.scrollHeight;
+    });
+}
+
+function sendChatMessage() {
+    var input = document.getElementById('chat-input');
+    var msg = input.value.trim();
+    if (!msg || !currentChatUserId) return;
+    input.value = ''; 
+    _supabase.from('messages').insert([{
+        sender_id: currentUser.id,
+        receiver_id: currentChatUserId,
+        message: msg
+    }]).then(function(res) {
+        if (res.error) {
+            Swal.showValidationMessage('فشل الإرسال: ' + res.error.message);
+        } else {
+            loadChatMessages();
         }
     });
 }
