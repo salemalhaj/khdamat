@@ -416,12 +416,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.addEventListener('click', doLogout);
 });
-// معالجة رابط تأكيد البريد الإلكتروني
+// معالجة رابط تأكيد البريد الإلكتروني (الطريقة الصحيحة)
 (function handleEmailConfirmation() {
+    // نقرأ الرابط الذي يحتوي على token_hash
     var urlParams = new URLSearchParams(window.location.search);
     var tokenHash = urlParams.get('token_hash');
     var type = urlParams.get('type');
 
+    // إذا وجدنا token_hash ونوعه signup، نبدأ عملية التأكيد
     if (tokenHash && type === 'signup') {
         Swal.fire({
             title: 'جاري تأكيد البريد...',
@@ -429,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
             didOpen: function() { Swal.showLoading(); }
         });
 
+        // نرسل الرمز إلى Supabase للتحقق منه
         _supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: 'signup'
@@ -437,6 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire('خطأ', 'فشل تأكيد البريد: ' + res.error.message, 'error');
             } else {
                 Swal.fire('تم', 'تم تأكيد بريدك الإلكتروني بنجاح! يمكنك الآن تسجيل الدخول.', 'success');
+                // ننظف الرابط من الرموز
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         });
