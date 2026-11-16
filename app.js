@@ -226,7 +226,7 @@ function renderServices() {
             if (res.data && res.data.length > 0) {
                 for (var i=0; i<res.data.length; i++) {
                     var s = res.data[i];
-                    c += '<div class="card" style="padding:15px; margin-bottom:10px;"><h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong><button class="btn btn-primary btn-sm" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button></div></div>';
+                     c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + '<h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong><button class="btn btn-primary btn-sm" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button></div></div>';
                 }
             } else c += '<div class="card"><p style="text-align:center;">' + t('no_services_avail') + '</p></div>';
             document.getElementById('page-services').innerHTML = c;
@@ -235,16 +235,51 @@ function renderServices() {
 }
 
 function showAddService() {
-    Swal.fire({ title: t('add_service_title'), html: '<input id="s-t" class="swal2-input" placeholder="' + t('name') + '"><input id="s-p" class="swal2-input" type="number" placeholder="' + t('price') + '"><textarea id="s-d" class="swal2-textarea" placeholder="' + t('desc') + '"></textarea>', confirmButtonText: t('send'), showCancelButton: true, cancelButtonText: t('cancel') }).then(function(r) {
+    Swal.fire({ 
+        title: t('add_service_title'), 
+        html: '<input id="s-t" class="swal2-input" placeholder="' + t('name') + '"><input id="s-p" class="swal2-input" type="number" placeholder="' + t('price') + '"><textarea id="s-d" class="swal2-textarea" placeholder="' + t('desc') + '"></textarea><input id="s-img" type="file" class="swal2-file" accept="image/*" style="margin-top:10px;">', 
+        confirmButtonText: t('send'), 
+        showCancelButton: true, 
+        cancelButtonText: t('cancel') 
+    }).then(function(r) {
         if (r.isConfirmed) {
-            var title = document.getElementById('s-t').value, price = document.getElementById('s-p').value, desc = document.getElementById('s-d').value;
+            var title = document.getElementById('s-t').value;
+            var price = document.getElementById('s-p').value;
+            var desc = document.getElementById('s-d').value;
+            var file = document.getElementById('s-img').files[0];
+            
             if (!title || !price) return Swal.fire(t('alert'), t('fill_fields'), 'warning');
-            Swal.fire({ title: t('sending'), didOpen: function() { Swal.showLoading(); } });
-            _supabase.from('services').insert([{ provider_id: currentUser.id, title: title, description: desc, price: parseFloat(price), status: 'pending' }]).then(function() {
-                _supabase.rpc('notify_admins', { p_title: 'New Service', p_message: userProfile.full_name + ' added "' + title + '"' });
-                Swal.fire(t('success'), t('request_sent'), 'success');
-                renderServices();
-            });
+            
+            Swal.fire({ title: t('uploading'), didOpen: function() { Swal.showLoading(); } });
+            
+            var processService = function(imageUrl) {
+                _supabase.from('services').insert([{ 
+                    provider_id: currentUser.id, 
+                    title: title, 
+                    description: desc, 
+                    price: parseFloat(price), 
+                    status: 'pending',
+                    image_url: imageUrl 
+                }]).then(function() {
+                    _supabase.rpc('notify_admins', { p_title: 'New Service', p_message: userProfile.full_name + ' added "' + title + '"' });
+                    Swal.fire(t('success'), t('request_sent'), 'success');
+                    renderServices();
+                });
+            };
+
+            if (file) {
+                var fileName = Date.now() + '_' + currentUser.id + '.' + file.name.split('.').pop();
+                _supabase.storage.from('services').upload(fileName, file).then(function(upRes) {
+                    if (upRes.error) {
+                        processService(''); // إذا فشل الرفع، نضيف الخدمة بدون صورة
+                    } else {
+                        var publicUrl = _supabase.storage.from('services').getPublicUrl(fileName).data.publicUrl;
+                        processService(publicUrl);
+                    }
+                });
+            } else {
+                processService(''); // إذا لم يختر صورة
+            }
         }
     });
 }
