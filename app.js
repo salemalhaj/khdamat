@@ -344,7 +344,7 @@ function renderAdmin() {
                         c += '</div><div id="a-trans" class="hidden">';
                         if(ptRes.data) for(var m=0; m<ptRes.data.length; m++) { var tx = ptRes.data[m]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + tx.amount + ' ' + t('currency') + '</strong><a href="' + tx.receipt_url + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;">' + t('view_receipt') + '</a><button class="btn btn-primary btn-sm" onclick="approveTransfer(\'' + tx.id + '\', \'' + tx.user_id + '\', ' + tx.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
-                        c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px;"><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px;"></div></div></div>';
+                        c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -360,6 +360,7 @@ function adminTab(el, id) {
     var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
+    if (id === 'a-cards') loadAdminCardsList();
 }
 
 function approveService(id) { _supabase.from('services').update({ status: 'approved' }).eq('id', id).then(function() { Swal.fire(t('success'), t('approved_msg'), 'success'); renderAdmin(); }); }
@@ -406,6 +407,51 @@ function generateCards() {
             Swal.fire(t('success'), t('generated'), 'success');
         } else { Swal.fire(t('error'), 'لم يتم توليد أي بطاقات', 'error'); }
     });
+}
+function loadAdminCardsList() {
+    var tableContainer = document.getElementById('cards-list');
+    if (!tableContainer) return;
+    tableContainer.innerHTML = '<p>جاري تحميل السجل...</p>';
+
+    _supabase.from('recharge_cards')
+        .select('*, profiles!recharge_cards_used_by_fkey(full_name, phone, email)')
+        .order('created_at', { ascending: false })
+        .then(function(res) {
+            if (res.error) {
+                tableContainer.innerHTML = '<p style="color:red;">خطأ: ' + res.error.message + '</p>';
+                return;
+            }
+            if (!res.data || res.data.length === 0) {
+                tableContainer.innerHTML = '<p>لا توجد بطاقات مولدة.</p>';
+                return;
+            }
+
+            var html = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px; text-align:right;">';
+            html += '<tr style="background:#eee; border-bottom:2px solid #ccc;"><th style="padding:5px;">التسلسل</th><th style="padding:5px;">الكود</th><th style="padding:5px;">القيمة</th><th style="padding:5px;">الحالة</th><th style="padding:5px;">مستخدم البطاقة</th></tr>';
+            
+            res.data.forEach(function(card) {
+                var statusText = card.status === 'active' ? 'جديدة' : 'مستخدمة';
+                var statusColor = card.status === 'active' ? 'var(--primary)' : 'red';
+                var userInfo = '-';
+                
+                // إذا كان هناك مستخدم قام بتعبئتها
+                if (card.profiles) {
+                    userInfo = '<b>' + card.profiles.full_name + '</b><br>' + 
+                               '<small>' + (card.profiles.phone || 'لا يوجد هاتف') + '</small><br>' + 
+                               '<small>' + (card.profiles.email || 'لا يوجد إيميل') + '</small>';
+                }
+                
+                html += '<tr style="border-bottom:1px solid #ddd;">';
+                html += '<td style="padding:8px; font-weight:bold;">' + (card.serial_number || '-') + '</td>';
+                html += '<td style="padding:8px; font-family:monospace; color:var(--primary);">' + card.code + '</td>';
+                html += '<td style="padding:8px;">' + card.amount + ' د.ل</td>';
+                html += '<td style="padding:8px; color:' + statusColor + '; font-weight:bold;">' + statusText + '</td>';
+                html += '<td style="padding:8px;">' + userInfo + '</td>';
+                html += '</tr>';
+            });
+            html += '</table></div>';
+            tableContainer.innerHTML = html;
+        });
 }
 
 function checkSession() {
