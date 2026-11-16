@@ -416,3 +416,29 @@ document.addEventListener('DOMContentLoaded', function() {
     var btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.addEventListener('click', doLogout);
 });
+// معالجة رابط تأكيد البريد الإلكتروني
+(function handleEmailConfirmation() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var tokenHash = urlParams.get('token_hash');
+    var type = urlParams.get('type');
+
+    if (tokenHash && type === 'signup') {
+        Swal.fire({
+            title: 'جاري تأكيد البريد...',
+            allowOutsideClick: false,
+            didOpen: function() { Swal.showLoading(); }
+        });
+
+        _supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'signup'
+        }).then(function(res) {
+            if (res.error) {
+                Swal.fire('خطأ', 'فشل تأكيد البريد: ' + res.error.message, 'error');
+            } else {
+                Swal.fire('تم', 'تم تأكيد بريدك الإلكتروني بنجاح! يمكنك الآن تسجيل الدخول.', 'success');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+    }
+})();
