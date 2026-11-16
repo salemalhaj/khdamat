@@ -96,7 +96,7 @@ function setupUI() {
         document.getElementById('nav-orders').classList.add('hidden');
     }
     applyTranslations();
-        loadNotifications();
+    loadNotifications(); 
 }
 
 function doLogout() { _supabase.auth.signOut(); location.reload(); }
@@ -424,11 +424,7 @@ function checkSession() {
         }
     });
 }
-دالة تحميل الإشعارات() {
 
-إذا لم يكن المستخدم الحالي موجودًا، فقم بالخروج.
-
-_supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false).then(fun)
 function loadNotifications() {
     if (!currentUser) return;
     _supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false).then(function(res) {
@@ -492,7 +488,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnProfile) btnProfile.addEventListener('click', showProfile);
     var btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.addEventListener('click', doLogout);
-        var btnNotif = document.getElementById('btn-notifications');
+
+    var btnNotif = document.getElementById('btn-notifications');
     if (btnNotif) btnNotif.addEventListener('click', showNotifications);
 });
 // معالجة رابط تأكيد البريد الإلكتروني (الطريقة الصحيحة)
