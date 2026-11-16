@@ -96,6 +96,7 @@ function setupUI() {
         document.getElementById('nav-orders').classList.add('hidden');
     }
     applyTranslations();
+        loadNotifications();
 }
 
 function doLogout() { _supabase.auth.signOut(); location.reload(); }
@@ -423,7 +424,48 @@ function checkSession() {
         }
     });
 }
+دالة تحميل الإشعارات() {
 
+إذا لم يكن المستخدم الحالي موجودًا، فقم بالخروج.
+
+_supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false).then(fun)
+function loadNotifications() {
+    if (!currentUser) return;
+    _supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false).then(function(res) {
+        var badge = document.getElementById('notif-badge');
+        if (badge) {
+            if (res.count && res.count > 0) {
+                badge.innerText = res.count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    });
+}
+
+function showNotifications() {
+    Swal.fire({ title: 'جاري التحميل...', didOpen: function() { Swal.showLoading(); } });
+    _supabase.from('notifications').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).then(function(res) {
+        if (res.data && res.data.length > 0) {
+            var html = '<div style="text-align:right; max-height:300px; overflow-y:auto;">';
+            res.data.forEach(function(n) {
+                html += '<div style="padding:10px; border-bottom:1px solid #eee; ' + (n.is_read ? 'opacity:0.6;' : 'background:#f0f8ff;') + '">';
+                html += '<strong>' + n.title + '</strong><br><small>' + n.message + '</small><br><small style="color:#999">' + new Date(n.created_at).toLocaleString('ar-EG') + '</small>';
+                html += '</div>';
+            });
+            html += '</div>';
+            Swal.fire({ title: 'الإشعارات', html: html, confirmButtonText: 'إغلاق' });
+            
+            _supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false).then(function() {
+                var badge = document.getElementById('notif-badge');
+                if (badge) badge.classList.add('hidden');
+            });
+        } else {
+            Swal.fire('الإشعارات', 'لا يوجد إشعارات جديدة', 'info');
+        }
+    });
+}
 document.addEventListener('DOMContentLoaded', function() {
     var savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -450,6 +492,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnProfile) btnProfile.addEventListener('click', showProfile);
     var btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.addEventListener('click', doLogout);
+        var btnNotif = document.getElementById('btn-notifications');
+    if (btnNotif) btnNotif.addEventListener('click', showNotifications);
 });
 // معالجة رابط تأكيد البريد الإلكتروني (الطريقة الصحيحة)
 (function handleEmailConfirmation() {
