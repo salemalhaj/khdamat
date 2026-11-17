@@ -128,11 +128,29 @@ function showProfile() {
 function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
-        var c = '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;"><p style="font-size:13px; opacity:0.9;">' + t('welcome') + userProfile.full_name + '</p><div class="balance" style="color:white;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div><p style="font-size:12px; opacity:0.8;">' + t('balance_title') + '</p></div>';
-        if (userProfile.role === 'provider') c += '<button class="btn btn-accent" onclick="showAddService()"><i class="fa-solid fa-plus"></i> ' + t('add_service') + '</button>';
-        else if (userProfile.role === 'user') c += '<div class="grid-2"><button class="btn btn-accent" onclick="navTo(\'wallet\')"><i class="fa-solid fa-plus-circle"></i> ' + t('deposit') + '</button><button class="btn btn-primary" onclick="navTo(\'services\')"><i class="fa-solid fa-search"></i> ' + t('request_service') + '</button></div>';
-        else if (userProfile.role === 'admin') c += '<button class="btn btn-accent" onclick="navTo(\'admin\')"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_panel_btn') + '</button>';
-        document.getElementById('page-home').innerHTML = c;
+        
+        // جلب الإعلانات أولاً
+        _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
+            var adsHtml = '';
+            if (adsRes.data && adsRes.data.length > 0) {
+                var track = '';
+                // نكرر الصور مرتين لضمان استمرارية الحركة بدون تقطيع
+                for (var i = 0; i < 2; i++) {
+                    adsRes.data.forEach(function(ad) {
+                        track += '<img src="' + ad.image_url + '" alt="Ad">';
+                    });
+                }
+                adsHtml = '<div class="ad-container"><div class="ad-track">' + track + '</div></div>';
+            }
+
+            var c = adsHtml + '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;"><p style="font-size:14px; font-weight:600; opacity:0.9;">' + t('welcome') + userProfile.full_name + '</p><div class="balance" style="color:white;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div><p style="font-size:12px; opacity:0.8;">' + t('balance_title') + '</p></div>';
+            
+            if (userProfile.role === 'provider') c += '<button class="btn btn-accent" onclick="showAddService()"><i class="fa-solid fa-plus"></i> ' + t('add_service') + '</button>';
+            else if (userProfile.role === 'user') c += '<div class="grid-2"><button class="btn btn-accent" onclick="navTo(\'wallet\')"><i class="fa-solid fa-plus-circle"></i> ' + t('deposit') + '</button><button class="btn btn-primary" onclick="navTo(\'services\')"><i class="fa-solid fa-search"></i> ' + t('request_service') + '</button></div>';
+            else if (userProfile.role === 'admin') c += '<button class="btn btn-accent" onclick="navTo(\'admin\')"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_panel_btn') + '</button>';
+            
+            document.getElementById('page-home').innerHTML = c;
+        });
     });
 }
 
@@ -335,7 +353,7 @@ function renderAdmin() {
             _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
                 _supabase.from('withdrawals').select('*').eq('status', 'pending').then(function(pwRes) {
                     _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
-                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs"><div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div><div class="tab" onclick="adminTab(this, \'a-users\')">المستخدمون</div></div><div id="a-serv">';
+                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs"><div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div><div class="tab" onclick="adminTab(this, \'a-users\')">المستخدمون</div></div><div id="a-serv"> <div cla/div><div class="tab" onclick="adminTab(this, 'a-ads')">الإعلانات</div></div><div id="a-serv">';
                         if(psRes.data) for(var j=0; j<psRes.data.length; j++) { var s = psRes.data[j]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + s.id + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + s.id + '\')">' + t('reject') + '</button></div></div>'; }
                         if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
                         c += '</div><div id="a-with" class="hidden">';
@@ -346,6 +364,7 @@ function renderAdmin() {
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
                         c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
                         c += '</div><div id="a-users" class="hidden"></div>';
+                        c += '</div><div id="a-ads" class="hidden"></div>';
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -364,6 +383,7 @@ function adminTab(el, id) {
     
     if (id === 'a-cards') loadAdminCardsList();
     if (id === 'a-users') loadUsersList();
+    if (id === 'a-ads') loadAdminAds();
 }
 
 function approveService(id) { _supabase.from('services').update({ status: 'approved' }).eq('id', id).then(function() { Swal.fire(t('success'), t('approved_msg'), 'success'); renderAdmin(); }); }
@@ -491,6 +511,71 @@ function loadUsersList() {
         }
         html += '</table></div></div>';
         container.innerHTML = html;
+    });
+}
+
+function loadAdminAds() {
+    var container = document.getElementById('a-ads');
+    if (!container) return;
+    container.innerHTML = '<div class="card"><p>جاري التحميل...</p></div>';
+
+    _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
+        var html = '<div class="card" style="padding:15px; margin-bottom:15px;">';
+        html += '<h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4>';
+        html += '<input type="file" id="ad-img" accept="image/*" class="swal2-file" style="margin-bottom:10px;">';
+        html += '<button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button>';
+        html += '</div>';
+
+        html += '<div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">الإعلانات الحالية</h4>';
+        if (res.data && res.data.length > 0) {
+            res.data.forEach(function(ad) {
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;">';
+                html += '<img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;">';
+                html += '<button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>';
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    });
+}
+
+function uploadAd() {
+    var fileInput = document.getElementById('ad-img');
+    var file = fileInput.files[0];
+    if (!file) return Swal.fire('تنبيه', 'اختر صورة للإعلان أولاً', 'warning');
+
+    Swal.fire({ title: 'جاري الرفع...', didOpen: function() { Swal.showLoading(); } });
+    var fileName = 'ad_' + Date.now() + '.' + file.name.split('.').pop();
+    
+    _supabase.storage.from('services').upload(fileName, file).then(function(upRes) {
+        if (upRes.error) return Swal.fire('خطأ', upRes.error.message, 'error');
+        
+        var publicUrl = _supabase.storage.from('services').getPublicUrl(fileName).data.publicUrl;
+        _supabase.from('ads').insert([{ image_url: publicUrl }]).then(function(insRes) {
+            if (insRes.error) return Swal.fire('خطأ', insRes.error.message, 'error');
+            Swal.fire('تم', 'تم إضافة الإعلان بنجاح', 'success');
+            loadAdminAds();
+        });
+    });
+}
+
+function deleteAd(id) {
+    Swal.fire({
+        title: 'حذف الإعلان؟',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء'
+    }).then(function(r) {
+        if (r.isConfirmed) {
+            _supabase.from('ads').delete().eq('id', id).then(function() {
+                Swal.fire('تم', 'تم الحذف', 'success');
+                loadAdminAds();
+            });
+        }
     });
 }
 
