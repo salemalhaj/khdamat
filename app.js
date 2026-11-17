@@ -335,7 +335,7 @@ function renderAdmin() {
             _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
                 _supabase.from('withdrawals').select('*').eq('status', 'pending').then(function(pwRes) {
                     _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
-                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs"><div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div></div><div id="a-serv">';
+                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs"><div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div><div class="tab" onclick="adminTab(this, \'a-users\')">المستخدمون</div></div><div id="a-serv">';
                         if(psRes.data) for(var j=0; j<psRes.data.length; j++) { var s = psRes.data[j]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + s.id + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + s.id + '\')">' + t('reject') + '</button></div></div>'; }
                         if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
                         c += '</div><div id="a-with" class="hidden">';
@@ -345,6 +345,7 @@ function renderAdmin() {
                         if(ptRes.data) for(var m=0; m<ptRes.data.length; m++) { var tx = ptRes.data[m]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + tx.amount + ' ' + t('currency') + '</strong><a href="' + tx.receipt_url + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;">' + t('view_receipt') + '</a><button class="btn btn-primary btn-sm" onclick="approveTransfer(\'' + tx.id + '\', \'' + tx.user_id + '\', ' + tx.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
                         c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
+                        c += '</div><div id="a-users" class="hidden"></div>';
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -357,10 +358,12 @@ function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards'];
+    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
+    
     if (id === 'a-cards') loadAdminCardsList();
+    if (id === 'a-users') loadUsersList();
 }
 
 function approveService(id) { _supabase.from('services').update({ status: 'approved' }).eq('id', id).then(function() { Swal.fire(t('success'), t('approved_msg'), 'success'); renderAdmin(); }); }
@@ -452,6 +455,43 @@ function loadAdminCardsList() {
             html += '</table></div>';
             tableContainer.innerHTML = html;
         });
+}
+
+function loadUsersList() {
+    var container = document.getElementById('a-users');
+    if (!container) return;
+    container.innerHTML = '<div class="card"><p>جاري تحميل بيانات المستخدمين...</p></div>';
+    
+    _supabase.from('profiles').select('*, wallets(balance)').order('created_at', { ascending: false }).then(function(res) {
+        if (res.error) {
+            container.innerHTML = '<div class="card"><p style="color:red;">خطأ: ' + res.error.message + '</p></div>';
+            return;
+        }
+        
+        var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">قائمة المستخدمين والمزودين</h4>';
+        html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px; text-align:right;">';
+        html += '<tr style="background:#eee; border-bottom:2px solid #ccc;"><th style="padding:5px;">الاسم</th><th style="padding:5px;">الدور</th><th style="padding:5px;">الهاتف</th><th style="padding:5px;">الإيميل</th><th style="padding:5px;">الرصيد</th></tr>';
+        
+        if (res.data && res.data.length > 0) {
+            res.data.forEach(function(user) {
+                var roleText = user.role === 'admin' ? 'مدير' : (user.role === 'provider' ? 'مزود' : 'مستخدم');
+                var roleColor = user.role === 'admin' ? 'var(--accent)' : (user.role === 'provider' ? 'var(--primary)' : '#007bff');
+                var bal = user.wallets ? Number(user.wallets.balance).toFixed(2) : '0.00';
+                
+                html += '<tr style="border-bottom:1px solid #ddd;">';
+                html += '<td style="padding:8px; font-weight:bold;">' + user.full_name + '</td>';
+                html += '<td style="padding:8px; color:' + roleColor + '; font-weight:bold;">' + roleText + '</td>';
+                html += '<td style="padding:8px;" dir="ltr">' + (user.phone || '-') + '</td>';
+                html += '<td style="padding:8px;">' + (user.email || '-') + '</td>';
+                html += '<td style="padding:8px; font-weight:bold; color:var(--primary);">' + bal + ' د.ل</td>';
+                html += '</tr>';
+            });
+        } else {
+            html += '<tr><td colspan="5" style="text-align:center; padding:10px;">لا يوجد مستخدمين.</td></tr>';
+        }
+        html += '</table></div></div>';
+        container.innerHTML = html;
+    });
 }
 
 function checkSession() {
