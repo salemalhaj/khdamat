@@ -344,7 +344,6 @@ function renderOrders() {
         });
     }
 }
-
 function renderAdmin() {
     document.getElementById('page-admin').innerHTML = '<div class="card"><p>' + t('loading') + '</p></div>';
     _supabase.from('profiles').select('*', { count: 'exact', head: true }).then(function(ucRes) {
@@ -362,9 +361,9 @@ function renderAdmin() {
                         c += '</div><div id="a-trans" class="hidden">';
                         if(ptRes.data) for(var m=0; m<ptRes.data.length; m++) { var tx = ptRes.data[m]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + tx.amount + ' ' + t('currency') + '</strong><a href="' + tx.receipt_url + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;">' + t('view_receipt') + '</a><button class="btn btn-primary btn-sm" onclick="approveTransfer(\'' + tx.id + '\', \'' + tx.user_id + '\', ' + tx.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
-                        c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
+                        c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div>';
                         c += '</div><div id="a-users" class="hidden"></div>';
-                        c += '</div><div id="a-ads" class="hidden"></div>';
+                        c += '<div id="a-ads" class="hidden"></div>';
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -372,6 +371,7 @@ function renderAdmin() {
         });
     });
 }
+
 
 function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
