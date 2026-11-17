@@ -372,12 +372,11 @@ function renderAdmin() {
     });
 }
 
-
 function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users'];
+    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users', 'a-ads'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
     
