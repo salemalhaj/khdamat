@@ -125,22 +125,35 @@ function showProfile() {
     Swal.fire({ title: t('profile'), html: '<p>' + t('name') + ': <b>' + userProfile.full_name + '</b></p><p>' + t('role') + ': <b>' + t('role_' + userProfile.role) + '</b></p>', confirmButtonText: t('close') });
 }
 
+var adsList = [];
+var currentAdIndex = 0;
+var adDuration = 5000;
+var adTimer = null;
+var progressInterval = null;
+var isAdPaused = false;
+var adStartTime = 0;
+var adRemainingTime = 0;
+
 function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
-        
-        // جلب الإعلانات أولاً
+        var savedSec = localStorage.getItem('ad_duration_sec');
+        if (savedSec) adDuration = Number(savedSec) * 1000;
+
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
+            adsList = adsRes.data || [];
             var adsHtml = '';
-            if (adsRes.data && adsRes.data.length > 0) {
-                var track = '';
-                // نكرر الصور مرتين لضمان استمرارية الحركة بدون تقطيع
-                for (var i = 0; i < 2; i++) {
-                    adsRes.data.forEach(function(ad) {
-                        track += '<img src="' + ad.image_url + '" alt="Ad">';
-                    });
+
+            if (adsList.length > 0) {
+                var bars = '';
+                for (var i = 0; i < adsList.length; i++) {
+                    bars += '<div style="flex:1; height:3px; background:rgba(150,150,150,0.3); border-radius:3px; overflow:hidden;"><div id="ad-bar-' + i + '" style="width:0%; height:100%; background:var(--accent); transition:width 0.1s linear;"></div></div>';
                 }
-                adsHtml = '<div class="ad-container"><div class="ad-track">' + track + '</div></div>';
+                adsHtml = '<div id="pro-ads-box" style="margin: 0 auto 15px auto; max-width: 100%; user-select: none; -webkit-user-select: none;">' +
+                          '<div style="display:flex; gap:5px; margin-bottom:8px; padding:0 5px;">' + bars + '</div>' +
+                          '<div id="ads-touch-area" style="position:relative; width:100%; border-radius:15px; overflow:hidden; cursor:pointer; touch-action:pan-y; text-align:center;">' +
+                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity 0.25s ease;">' +
+                          '</div></div>';
             }
 
             var c = adsHtml + '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;"><p style="font-size:14px; font-weight:600; opacity:0.9;">' + t('welcome') + userProfile.full_name + '</p><div class="balance" style="color:white;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div><p style="font-size:12px; opacity:0.8;">' + t('balance_title') + '</p></div>';
@@ -150,8 +163,142 @@ function renderHome() {
             else if (userProfile.role === 'admin') c += '<button class="btn btn-accent" onclick="navTo(\'admin\')"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_panel_btn') + '</button>';
             
             document.getElementById('page-home').innerHTML = c;
+
+            if (adsList.length > 0) {
+                setupProAdsControls();
+                showProAdSlide(0);
+            }
         });
     });
+}
+
+function showProAdSlide(index) {
+    clearTimeout(adTimer);
+    clearInterval(progressInterval);
+    if (!adsList.length) return;
+
+    if (index >= adsList.length) index = 0;
+    if (index < 0) index = adsList.length - 1;
+    currentAdIndex = index;
+
+    var imgEl = document.getElementById('current-ad-img');
+    if (imgEl) {
+        imgEl.style.opacity = '0.5';
+        setTimeout(function() {
+            imgEl.src = adsList[currentAdIndex].image_url;
+            imgEl.style.opacity = '1';
+        }, 100);
+    }
+
+    for (var i = 0; i < adsList.length; i++) {
+        var bar = document.getElementById('ad-bar-' + i);
+        if (bar) bar.style.width = (i < currentAdIndex) ? '100%' : '0%';
+    }
+
+    adRemainingTime = adDuration;
+    startProAdTimer();
+}
+
+function startProAdTimer() {
+    isAdPaused = false;
+    adStartTime = Date.now();
+    var currentBar = document.getElementById('ad-bar-' + currentAdIndex);
+
+    progressInterval = setInterval(function() {
+        if (!isAdPaused) {
+            var elapsed = Date.now() - adStartTime;
+            var totalElapsed = (adDuration - adRemainingTime) + elapsed;
+            var percent = Math.min((totalElapsed / adDuration) * 100, 100);
+            if (currentBar) currentBar.style.width = percent + '%';
+        }
+    }, 50);
+
+    adTimer = setTimeout(function() {
+        showProAdSlide(currentAdIndex + 1);
+    }, adRemainingTime);
+}
+
+function pauseProAd() {
+    if (isAdPaused) return;
+    isAdPaused = true;
+    clearTimeout(adTimer);
+    clearInterval(progressInterval);
+    adRemainingTime -= (Date.now() - adStartTime);
+}
+
+function resumeProAd() {
+    if (!isAdPaused) return;
+    startProAdTimer();
+}
+
+function setupProAdsControls() {
+    var box = document.getElementById('ads-touch-area');
+    if (!box) return;
+    var touchStartX = 0;
+
+    box.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+        pauseProAd();
+    }, { passive: true });
+
+    box.addEventListener('touchend', function(e) {
+        var touchEndX = e.changedTouches[0].clientX;
+        var diff = touchStartX - touchEndX;
+        resumeProAd();
+
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) showProAdSlide(currentAdIndex + 1);
+            else showProAdSlide(currentAdIndex - 1);
+        }
+    });
+
+    box.addEventListener('mousedown', pauseProAd);
+    box.addEventListener('mouseup', resumeProAd);
+    box.addEventListener('mouseleave', function() { if (isAdPaused) resumeProAd(); });
+}
+
+function loadAdminAds() {
+    var container = document.getElementById('a-ads');
+    if (!container) return;
+    container.innerHTML = '<div class="card"><p>جاري التحميل...</p></div>';
+    var savedSec = localStorage.getItem('ad_duration_sec') || 5;
+
+    _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
+        var html = '<div class="card" style="padding:15px; margin-bottom:15px;">';
+        html += '<h4 style="margin-bottom:10px;">إعدادات وقت الإعلان</h4>';
+        html += '<div style="display:flex; gap:8px; align-items:center;">';
+        html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="الوقت بالثواني" style="margin:0;">';
+        html += '<button class="btn btn-primary" onclick="saveAdTime()" style="margin:0; white-space:nowrap;">حفظ الوقت</button>';
+        html += '</div></div>';
+
+        html += '<div class="card" style="padding:15px; margin-bottom:15px;">';
+        html += '<h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4>';
+        html += '<input type="file" id="ad-img" accept="image/*" class="swal2-file" style="margin-bottom:10px;">';
+        html += '<button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button>';
+        html += '</div>';
+
+        html += '<div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">الإعلانات الحالية</h4>';
+        if (res.data && res.data.length > 0) {
+            res.data.forEach(function(ad) {
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;">';
+                html += '<img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;">';
+                html += '<button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>';
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    });
+}
+
+function saveAdTime() {
+    var sec = document.getElementById('ad-sec-input').value;
+    if (!sec || sec < 1) return Swal.fire('تنبيه', 'أدخل عدداً صحيحاً من الثواني', 'warning');
+    localStorage.setItem('ad_duration_sec', sec);
+    adDuration = Number(sec) * 1000;
+    Swal.fire('تم', 'تم حفظ مدة بقاء الإعلان (' + sec + ' ثواني)', 'success');
 }
 
 function renderWallet() {
