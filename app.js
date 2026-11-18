@@ -138,9 +138,11 @@ function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
         
-        // جلب وقت الإعلان من الذاكرة أو استخدام 5 ثواني كافتراضي
         var savedSec = localStorage.getItem('ad_duration_sec');
         if (savedSec) adDuration = Number(savedSec) * 1000;
+        
+        var savedSpeed = localStorage.getItem('ad_speed_ms');
+        if (savedSpeed) adSpeed = Number(savedSpeed);
 
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
             adsList = adsRes.data || [];
@@ -154,7 +156,8 @@ function renderHome() {
                 adsHtml = '<div id="pro-ads-box" style="margin: 0 auto 15px auto; max-width: 100%; user-select: none; -webkit-user-select: none;">' +
                           '<div style="display:flex; gap:5px; margin-bottom:8px; padding:0 5px;">' + bars + '</div>' +
                           '<div id="ads-touch-area" style="position:relative; width:100%; border-radius:15px; overflow:hidden; cursor:pointer; touch-action:pan-y; text-align:center;">' +
-                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity 0.25s ease;">' +
+                          // تم استخدام adSpeed هنا في الستايل الابتدائي
+                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity ' + adSpeed + 'ms ease;">' +
                           '</div></div>';
             }
 
@@ -176,6 +179,7 @@ function renderHome() {
 
 var adsList = [];
 var adDuration = 5000;
+var adSpeed = 300; // القيمة الافتراضية للسرعة (مللي ثانية)
 var adTimer = null;
 var progressInterval = null;
 var currentAdIndex = 0;
@@ -194,14 +198,14 @@ function showProAdSlide(index) {
 
     var imgEl = document.getElementById('current-ad-img');
     if (imgEl) {
-        imgEl.style.opacity = '0'; // إخفاء الصورة الحالية
+        imgEl.style.transition = 'opacity ' + adSpeed + 'ms ease'; // تطبيق السرعة المحددة
+        imgEl.style.opacity = '0'; 
         setTimeout(function() {
-            imgEl.src = adsList[currentAdIndex].image_url; // تغيير الصورة
-            imgEl.style.opacity = '1'; // إظهار الصورة الجديدة
-        }, 250); // الانتظار حتى تنتهي حركة الإخفاء
+            imgEl.src = adsList[currentAdIndex].image_url; 
+            imgEl.style.opacity = '1'; 
+        }, adSpeed); // الانتظار حسب السرعة المحددة
     }
 
-    // تصفير أشرطة التقدم
     for (var i = 0; i < adsList.length; i++) {
         var bar = document.getElementById('ad-bar-' + i);
         if (bar) {
@@ -277,15 +281,22 @@ function loadAdminAds() {
     var container = document.getElementById('a-ads');
     if (!container) return;
     container.innerHTML = '<div class="card"><p>جاري التحميل...</p></div>';
+    
     var savedSec = localStorage.getItem('ad_duration_sec') || 5;
+    var savedSpeed = localStorage.getItem('ad_speed_ms') || 300;
 
     _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
         var html = '<div class="card" style="padding:15px; margin-bottom:15px;">';
-        html += '<h4 style="margin-bottom:10px;">إعدادات وقت الإعلان</h4>';
-        html += '<div style="display:flex; gap:8px; align-items:center;">';
-        html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="الوقت بالثواني" style="margin:0;">';
-        html += '<button class="btn btn-primary" onclick="saveAdTime()" style="margin:0; white-space:nowrap;">حفظ الوقت</button>';
-        html += '</div></div>';
+        html += '<h4 style="margin-bottom:10px;">إعدادات العرض والسرعة</h4>';
+        
+        html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">مدة بقاء الصورة (بالثواني):</label>';
+        html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="مثال: 5" style="margin-bottom:10px;">';
+        
+        html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">سرعة الدخول والخروج (مللي ثانية):</label>';
+        html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="100" step="50" placeholder="مثال: 300 (لخطف سريع)" style="margin-bottom:15px;">';
+        
+        html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
+        html += '</div>';
 
         html += '<div class="card" style="padding:15px; margin-bottom:15px;">';
         html += '<h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4>';
@@ -309,12 +320,21 @@ function loadAdminAds() {
     });
 }
 
-function saveAdTime() {
+function saveAdSettings() {
     var sec = document.getElementById('ad-sec-input').value;
-    if (!sec || sec < 1) return Swal.fire('تنبيه', 'أدخل عدداً صحيحاً من الثواني', 'warning');
+    var speed = document.getElementById('ad-speed-input').value;
+    
+    if (!sec || sec < 1 || !speed || speed < 50) {
+        return Swal.fire('تنبيه', 'أدخل قيماً صحيحة للوقت والسرعة (السرعة 50 أو أكثر)', 'warning');
+    }
+    
     localStorage.setItem('ad_duration_sec', sec);
+    localStorage.setItem('ad_speed_ms', speed);
+    
     adDuration = Number(sec) * 1000;
-    Swal.fire('تم', 'تم حفظ مدة بقاء الإعلان (' + sec + ' ثواني)', 'success');
+    adSpeed = Number(speed);
+    
+    Swal.fire('تم', 'تم حفظ الإعدادات (الوقت: ' + sec + 'ث، السرعة: ' + speed + 'مللي)', 'success');
 }
 
 function renderWallet() {
