@@ -266,17 +266,15 @@ function loadAdminAds() {
     var savedSpeed = localStorage.getItem('ad_speed_ms') || 300;
 
     _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
-        var html = '<div class="card" style="padding:15px; margin-bottom:15px;">';
+        var html = '<div class="card" style="padding:15px; margin-bottom:15px; border: 2px solid var(--primary);">';
         html += '<h4 style="margin-bottom:10px; color:var(--primary);">إعدادات العرض والسرعة</h4>';
         
-        // 👇 هذه هي خانات الإدخال 👇
         html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">مدة بقاء الصورة (بالثواني):</label>';
         html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="مثال: 5" style="margin-bottom:10px;">';
         
         html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">سرعة الدخول والخروج (مللي ثانية):</label>';
         html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="50" step="50" placeholder="مثال: 300" style="margin-bottom:15px;">';
         
-        // 👇 هنا الزر يستدعي دالة الحفظ الجديدة 👇
         html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
         html += '</div>';
 
