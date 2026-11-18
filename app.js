@@ -137,6 +137,8 @@ var adRemainingTime = 0;
 function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
+        
+        // جلب وقت الإعلان من الذاكرة أو استخدام 5 ثواني كافتراضي
         var savedSec = localStorage.getItem('ad_duration_sec');
         if (savedSec) adDuration = Number(savedSec) * 1000;
 
@@ -172,10 +174,19 @@ function renderHome() {
     });
 }
 
+var adsList = [];
+var adDuration = 5000;
+var adTimer = null;
+var progressInterval = null;
+var currentAdIndex = 0;
+var adRemainingTime = 0;
+var isAdPaused = false;
+var adStartTime = 0;
+
 function showProAdSlide(index) {
     clearTimeout(adTimer);
     clearInterval(progressInterval);
-    if (!adsList.length) return;
+    if (adsList.length === 0) return;
 
     if (index >= adsList.length) index = 0;
     if (index < 0) index = adsList.length - 1;
@@ -183,16 +194,20 @@ function showProAdSlide(index) {
 
     var imgEl = document.getElementById('current-ad-img');
     if (imgEl) {
-        imgEl.style.opacity = '0.5';
+        imgEl.style.opacity = '0'; // إخفاء الصورة الحالية
         setTimeout(function() {
-            imgEl.src = adsList[currentAdIndex].image_url;
-            imgEl.style.opacity = '1';
-        }, 100);
+            imgEl.src = adsList[currentAdIndex].image_url; // تغيير الصورة
+            imgEl.style.opacity = '1'; // إظهار الصورة الجديدة
+        }, 250); // الانتظار حتى تنتهي حركة الإخفاء
     }
 
+    // تصفير أشرطة التقدم
     for (var i = 0; i < adsList.length; i++) {
         var bar = document.getElementById('ad-bar-' + i);
-        if (bar) bar.style.width = (i < currentAdIndex) ? '100%' : '0%';
+        if (bar) {
+            if (i < currentAdIndex) bar.style.width = '100%';
+            else bar.style.width = '0%';
+        }
     }
 
     adRemainingTime = adDuration;
@@ -224,6 +239,7 @@ function pauseProAd() {
     clearTimeout(adTimer);
     clearInterval(progressInterval);
     adRemainingTime -= (Date.now() - adStartTime);
+    if (adRemainingTime < 0) adRemainingTime = 0;
 }
 
 function resumeProAd() {
