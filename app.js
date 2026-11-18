@@ -138,8 +138,8 @@ function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
         
-        adDuration = Number(platformSettings.ad_duration || 3000);
-        adSpeed = Number(platformSettings.ad_speed || 100);
+        adDuration = Number(platformSettings.ad_duration || 4000);
+        adSpeed = Number(platformSettings.ad_speed || 400);
 
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
             adsList = adsRes.data || [];
