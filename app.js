@@ -258,45 +258,52 @@ function setupProAdsControls() {
 }
 
 function loadAdminAds() {
+    // رسالة تنبيه للتأكد أن الدالة تعمل
+    alert("🔍 اختبار: جاري تحميل إعدادات الإعلانات...");
+
     var container = document.getElementById('a-ads');
-    if (!container) return;
-    container.innerHTML = '<div class="card"><p>جاري التحميل...</p></div>';
+    if (!container) {
+        alert("❌ خطأ: لم أجد مكان الإعلانات (a-ads) في الصفحة!");
+        return;
+    }
     
-    var savedSec = localStorage.getItem('ad_duration_sec') || 5;
-    var savedSpeed = localStorage.getItem('ad_speed_ms') || 300;
+    // كود HTML بسيط لاختبار ظهور الخانات
+    var html = '<div class="card" style="padding:15px; margin-bottom:15px; border: 3px solid red;">';
+    html += '<h4 style="margin-bottom:10px; color:red;">إعدادات العرض والسرعة (اختبار)</h4>';
+    
+    html += '<label style="font-weight:bold; display:block; margin-bottom:5px;">مدة بقاء الصورة (بالثواني):</label>';
+    html += '<input type="number" id="ad-sec-input" value="5" style="margin-bottom:10px;">';
+    
+    html += '<label style="font-weight:bold; display:block; margin-bottom:5px;">سرعة الدخول والخروج (مللي ثانية):</label>';
+    html += '<input type="number" id="ad-speed-input" value="300" style="margin-bottom:15px;">';
+    
+    html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
+    html += '</div>';
+    
+    // إضافة زر الرفع (لكي لا تفقد وظيفة الرفع)
+    html += '<div class="card" style="padding:15px;"><h4>إضافة إعلان جديد</h4><input type="file" id="ad-img" accept="image/*" style="margin-bottom:10px;"><button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button></div>';
+    
+    // إضافة الإعلانات الحالية
+    html += '<div class="card" style="padding:15px;"><h4>الإعلانات الحالية</h4><div id="ads-list-here">جاري التحميل...</div></div>';
 
+    container.innerHTML = html;
+    
+    // جلب الإعلانات الحالية لملء القائمة
     _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
-        var html = '<div class="card" style="padding:15px; margin-bottom:15px; border: 2px solid var(--primary);">';
-        html += '<h4 style="margin-bottom:10px; color:var(--primary);">إعدادات العرض والسرعة</h4>';
-        
-        html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">مدة بقاء الصورة (بالثواني):</label>';
-        html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="مثال: 5" style="margin-bottom:10px;">';
-        
-        html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">سرعة الدخول والخروج (مللي ثانية):</label>';
-        html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="50" step="50" placeholder="مثال: 300" style="margin-bottom:15px;">';
-        
-        html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
-        html += '</div>';
-
-        html += '<div class="card" style="padding:15px; margin-bottom:15px;">';
-        html += '<h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4>';
-        html += '<input type="file" id="ad-img" accept="image/*" class="swal2-file" style="margin-bottom:10px;">';
-        html += '<button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button>';
-        html += '</div>';
-
-        html += '<div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">الإعلانات الحالية</h4>';
+        var list = document.getElementById('ads-list-here');
+        if (!list) return;
         if (res.data && res.data.length > 0) {
+            var listHtml = '';
             res.data.forEach(function(ad) {
-                html += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;">';
-                html += '<img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;">';
-                html += '<button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button>';
-                html += '</div>';
+                listHtml += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;">';
+                listHtml += '<img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;">';
+                listHtml += '<button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button>';
+                listHtml += '</div>';
             });
+            list.innerHTML = listHtml;
         } else {
-            html += '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>';
+            list.innerHTML = '<p style="text-align:center;">لا توجد إعلانات.</p>';
         }
-        html += '</div>';
-        container.innerHTML = html;
     });
 }
 
