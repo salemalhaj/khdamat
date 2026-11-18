@@ -137,9 +137,8 @@ var adRemainingTime = 0;
 function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
-        
-        adDuration = Number(platformSettings.ad_duration || 1000);
-        adSpeed = Number(platformSettings.ad_speed || 400);
+        var savedSec = localStorage.getItem('ad_duration_sec');
+        if (savedSec) adDuration = Number(savedSec) * 1000;
 
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
             adsList = adsRes.data || [];
@@ -153,7 +152,7 @@ function renderHome() {
                 adsHtml = '<div id="pro-ads-box" style="margin: 0 auto 15px auto; max-width: 100%; user-select: none; -webkit-user-select: none;">' +
                           '<div style="display:flex; gap:5px; margin-bottom:8px; padding:0 5px;">' + bars + '</div>' +
                           '<div id="ads-touch-area" style="position:relative; width:100%; border-radius:15px; overflow:hidden; cursor:pointer; touch-action:pan-y; text-align:center;">' +
-                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity ' + adSpeed + 'ms ease;">' +
+                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity 0.25s ease;">' +
                           '</div></div>';
             }
 
@@ -163,137 +162,20 @@ function renderHome() {
             else if (userProfile.role === 'user') c += '<div class="grid-2"><button class="btn btn-accent" onclick="navTo(\'wallet\')"><i class="fa-solid fa-plus-circle"></i> ' + t('deposit') + '</button><button class="btn btn-primary" onclick="navTo(\'services\')"><i class="fa-solid fa-search"></i> ' + t('request_service') + '</button></div>';
             else if (userProfile.role === 'admin') c += '<button class="btn btn-accent" onclick="navTo(\'admin\')"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_panel_btn') + '</button>';
             
-            c += '<div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0 10px 0;">' +
-                 '<h3 style="margin:0; font-size:16px; color:var(--primary);"><i class="fa-solid fa-bolt"></i> البطاقات والباقات الفورية</h3>' +
-                 '<button onclick="showMyCardOrders()" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-receipt"></i> مشترياتي</button>' +
-                 '</div>';
-            c += '<div id="digital-store-container"><p style="text-align:center; font-size:13px; color:var(--text-muted);">جاري تحميل البطاقات...</p></div>';
-
             document.getElementById('page-home').innerHTML = c;
 
             if (adsList.length > 0) {
                 setupProAdsControls();
                 showProAdSlide(0);
             }
-
-            loadDigitalStore();
         });
     });
 }
-
-function loadDigitalStore() {
-    Promise.all([
-        _supabase.from('card_categories').select('*').order('sort_order', { ascending: true }),
-        _supabase.from('digital_cards').select('*').eq('is_active', true)
-    ]).then(function(results) {
-        var categories = results[0].data || [];
-        var cards = results[1].data || [];
-        var container = document.getElementById('digital-store-container');
-        if (!container) return;
-
-        if (categories.length === 0) {
-            container.innerHTML = '<div class="card" style="text-align:center; color:var(--text-muted); font-size:13px;">لا توجد بطاقات مضافة حالياً.</div>';
-            return;
-        }
-
-        var html = '';
-        categories.forEach(function(cat) {
-            var catCards = cards.filter(function(item) { return item.category_id === cat.id; });
-            if (catCards.length === 0) return;
-
-            html += '<div style="margin-bottom: 18px;">';
-            html += '<h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">' + cat.name + '</h4>';
-            html += '<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none;">';
-
-            catCards.forEach(function(card) {
-                var img = card.image_url || 'https://flaticon.com';
-                html += '<div onclick="confirmBuyCard(\'' + card.id + '\', \'' + card.name.replace(/'/g, "\\'") + '\', ' + card.price + ')" ' +
-                        'style="min-width:110px; max-width:110px; background:var(--card-bg, #fff); border:1px solid rgba(150,150,150,0.2); border-radius:14px; padding:10px; text-align:center; cursor:pointer; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.05);">' +
-                        '<img src="' + img + '" style="width:52px; height:52px; object-fit:contain; border-radius:10px; margin-bottom:6px;">' +
-                        '<div style="font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;">' + card.name + '</div>' +
-                        '<div style="font-size:12px; color:var(--primary); font-weight:bold; background:rgba(0,123,255,0.1); padding:2px 6px; border-radius:6px;">' + Number(card.price).toFixed(2) + ' ' + t('currency') + '</div>' +
-                        '</div>';
-            });
-
-            html += '</div></div>';
-        });
-
-        container.innerHTML = html || '<div class="card" style="text-align:center;">لا توجد بطاقات متوفرة.</div>';
-    });
-}
-
-function confirmBuyCard(cardId, cardName, price) {
-    Swal.fire({
-        title: 'تأكيد الشراء',
-        html: 'هل تريد شراء <b>' + cardName + '</b><br>بسعر <b style="color:var(--primary);">' + Number(price).toFixed(2) + ' ' + t('currency') + '</b> من محفظتك؟',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، اشترِ الآن',
-        cancelButtonText: 'إلغاء'
-    }).then(function(result) {
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'جاري تنفيذ الطلب...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-
-            _supabase.rpc('buy_digital_card', { p_card_id: cardId }).then(function(res) {
-                if (res.error) {
-                    Swal.fire('خطأ', res.error.message, 'error');
-                    return;
-                }
-                var data = res.data;
-                if (data && data.success) {
-                    Swal.fire({
-                        title: 'تم الشراء بنجاح!',
-                        html: '<p style="margin-bottom:8px;">بطاقة: <b>' + data.card_name + '</b></p>' +
-                              '<div style="background:#f4f4f4; color:#111; padding:12px; border-radius:10px; font-family:monospace; font-size:18px; font-weight:bold; letter-spacing:1px; user-select:all; border:1px dashed #999;">' + data.code + '</div>' +
-                              '<p style="font-size:12px; color:#666; margin-top:8px;">يمكنك الرجوع للكود في أي وقت من زر (مشترياتي)</p>',
-                        icon: 'success',
-                        confirmButtonText: 'نسخ الكود وإغلاق'
-                    }).then(function() {
-                        if (navigator.clipboard) navigator.clipboard.writeText(data.code);
-                        renderHome();
-                    });
-                } else {
-                    Swal.fire('تعذر الشراء', (data && data.message) ? data.message : 'حدث خطأ غير متوقع', 'error');
-                }
-            });
-        }
-    });
-}
-
-function showMyCardOrders() {
-    Swal.fire({ title: 'جاري تحميل مشترياتك...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-    _supabase.from('digital_card_orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).then(function(res) {
-        var orders = res.data || [];
-        if (orders.length === 0) {
-            Swal.fire('مشترياتي', 'لم تقم بشراء أي بطاقات بعد.', 'info');
-            return;
-        }
-        var listHtml = '<div style="max-height:300px; overflow-y:auto; text-align:right;">';
-        orders.forEach(function(o) {
-            listHtml += '<div style="border-bottom:1px solid #eee; padding:8px 0;">' +
-                        '<div style="font-weight:bold; font-size:14px;">' + o.card_name + ' <span style="float:left; color:var(--primary);">' + o.amount_paid + ' ' + t('currency') + '</span></div>' +
-                        '<div style="background:#f8f9fa; color:#222; padding:6px; border-radius:6px; font-family:monospace; font-size:14px; margin-top:4px; user-select:all;">' + o.code + '</div>' +
-                        '</div>';
-        });
-        listHtml += '</div>';
-        Swal.fire({ title: 'سجل مشترياتي من البطاقات', html: listHtml, confirmButtonText: 'إغلاق' });
-    });
-}
-
-var adsList = [];
-var adDuration = 5000;
-var adSpeed = 300; // القيمة الافتراضية للسرعة (مللي ثانية)
-var adTimer = null;
-var progressInterval = null;
-var currentAdIndex = 0;
-var adRemainingTime = 0;
-var isAdPaused = false;
-var adStartTime = 0;
 
 function showProAdSlide(index) {
     clearTimeout(adTimer);
     clearInterval(progressInterval);
-    if (adsList.length === 0) return;
+    if (!adsList.length) return;
 
     if (index >= adsList.length) index = 0;
     if (index < 0) index = adsList.length - 1;
@@ -301,20 +183,16 @@ function showProAdSlide(index) {
 
     var imgEl = document.getElementById('current-ad-img');
     if (imgEl) {
-        imgEl.style.transition = 'opacity ' + adSpeed + 'ms ease'; // تطبيق السرعة المحددة
-        imgEl.style.opacity = '0'; 
+        imgEl.style.opacity = '0.5';
         setTimeout(function() {
-            imgEl.src = adsList[currentAdIndex].image_url; 
-            imgEl.style.opacity = '1'; 
-        }, adSpeed); // الانتظار حسب السرعة المحددة
+            imgEl.src = adsList[currentAdIndex].image_url;
+            imgEl.style.opacity = '1';
+        }, 100);
     }
 
     for (var i = 0; i < adsList.length; i++) {
         var bar = document.getElementById('ad-bar-' + i);
-        if (bar) {
-            if (i < currentAdIndex) bar.style.width = '100%';
-            else bar.style.width = '0%';
-        }
+        if (bar) bar.style.width = (i < currentAdIndex) ? '100%' : '0%';
     }
 
     adRemainingTime = adDuration;
@@ -346,7 +224,6 @@ function pauseProAd() {
     clearTimeout(adTimer);
     clearInterval(progressInterval);
     adRemainingTime -= (Date.now() - adStartTime);
-    if (adRemainingTime < 0) adRemainingTime = 0;
 }
 
 function resumeProAd() {
@@ -390,14 +267,16 @@ function loadAdminAds() {
 
     _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
         var html = '<div class="card" style="padding:15px; margin-bottom:15px;">';
-        html += '<h4 style="margin-bottom:10px;">إعدادات العرض والسرعة</h4>';
+        html += '<h4 style="margin-bottom:10px; color:var(--primary);">إعدادات العرض والسرعة</h4>';
         
+        // 👇 هذه هي خانات الإدخال 👇
         html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">مدة بقاء الصورة (بالثواني):</label>';
         html += '<input type="number" id="ad-sec-input" value="' + savedSec + '" min="1" placeholder="مثال: 5" style="margin-bottom:10px;">';
         
         html += '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:14px;">سرعة الدخول والخروج (مللي ثانية):</label>';
-        html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="100" step="50" placeholder="مثال: 300 (لخطف سريع)" style="margin-bottom:15px;">';
+        html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="50" step="50" placeholder="مثال: 300" style="margin-bottom:15px;">';
         
+        // 👇 هنا الزر يستدعي دالة الحفظ الجديدة 👇
         html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
         html += '</div>';
 
@@ -423,21 +302,12 @@ function loadAdminAds() {
     });
 }
 
-function saveAdSettings() {
+function saveAdTime() {
     var sec = document.getElementById('ad-sec-input').value;
-    var speed = document.getElementById('ad-speed-input').value;
-    
-    if (!sec || sec < 1 || !speed || speed < 50) {
-        return Swal.fire('تنبيه', 'أدخل قيماً صحيحة للوقت والسرعة (السرعة 50 أو أكثر)', 'warning');
-    }
-    
+    if (!sec || sec < 1) return Swal.fire('تنبيه', 'أدخل عدداً صحيحاً من الثواني', 'warning');
     localStorage.setItem('ad_duration_sec', sec);
-    localStorage.setItem('ad_speed_ms', speed);
-    
     adDuration = Number(sec) * 1000;
-    adSpeed = Number(speed);
-    
-    Swal.fire('تم', 'تم حفظ الإعدادات (الوقت: ' + sec + 'ث، السرعة: ' + speed + 'مللي)', 'success');
+    Swal.fire('تم', 'تم حفظ مدة بقاء الإعلان (' + sec + ' ثواني)', 'success');
 }
 
 function renderWallet() {
@@ -977,6 +847,23 @@ function updateChatPrice() {
     });
 }
 // 👆 نهاية الكود الجديد 👆
+
+function saveAdSettings() {
+    var sec = document.getElementById('ad-sec-input').value;
+    var speed = document.getElementById('ad-speed-input').value;
+    
+    if (!sec || sec < 1 || !speed || speed < 50) {
+        return Swal.fire('تنبيه', 'أدخل قيماً صحيحة للوقت والسرعة (السرعة 50 أو أكثر)', 'warning');
+    }
+    
+    localStorage.setItem('ad_duration_sec', sec);
+    localStorage.setItem('ad_speed_ms', speed);
+    
+    adDuration = Number(sec) * 1000;
+    adSpeed = Number(speed);
+    
+    Swal.fire('تم', 'تم حفظ الإعدادات (الوقت: ' + sec + 'ث، السرعة: ' + speed + 'مللي)', 'success');
+}
 
 function checkSession() {
     _supabase.auth.getSession().then(function(res) {
