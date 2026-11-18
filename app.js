@@ -383,19 +383,40 @@ function renderServices() {
             if (res.data && res.data.length > 0) {
                 for (var i=0; i<res.data.length; i++) {
                     var s = res.data[i];
-                    c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<p style="font-size:12px; color:var(--text-muted);">' + t('status') + ': ' + (s.status === 'approved' ? '✅ ' + t('approved') : (s.status === 'pending' ? '⏳ ' + t('pending') : '❌ ' + t('rejected'))) + '</p></div>';
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + '<strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<p style="font-size:12px; color:var(--text-muted);">' + t('status') + ': ' + (s.status === 'approved' ? '✅ ' + t('approved') : (s.status === 'pending' ? '⏳ ' + t('pending') : '❌ ' + t('rejected'))) + '</p></div>';
                 }
-            } else c += '<div class="card"><p style="text-align:center;">' + t('no_services') + '</p></div>';
+            } else {
+                c += '<div class="card"><p style="text-align:center;">' + t('no_services') + '</p></div>';
+            }
             document.getElementById('page-services').innerHTML = c;
         });
     } else {
-        _supabase.from('services').select('*').eq('status', 'approved').then(function(res) {
+        // هنا قمنا بجلب بيانات المزود (full_name) لكي نعرض اسمه في المحادثة
+        _supabase.from('services').select('*, profiles(full_name)').eq('status', 'approved').then(function(res) {
             if (res.data && res.data.length > 0) {
                 for (var i=0; i<res.data.length; i++) {
                     var s = res.data[i];
-                     c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + '<h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong><button class="btn btn-primary btn-sm" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button></div></div>';
+                    // تأمين اسم المزود لتفادي أي أخطاء في علامات التنصيص
+                    var providerName = (s.profiles && s.profiles.full_name) ? s.profiles.full_name.replace(/'/g, "\\'") : 'المزود';
+                    
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + 
+                         (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + 
+                         '<h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4>' + 
+                         '<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p>' + 
+                         '<div style="display:flex; justify-content:space-between; align-items:center;">' + 
+                             '<strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong>' + 
+                             '<div style="display:flex; gap:5px;">' + 
+                                 // زر المحادثة
+                                 '<button class="btn btn-accent btn-sm" style="margin:0;" onclick="initiateChat(\'' + s.provider_id + '\', \'' + providerName + '\')"><i class="fa-solid fa-comment"></i></button>' + 
+                                 // زر الطلب
+                                 '<button class="btn btn-primary btn-sm" style="margin:0;" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button>' + 
+                             '</div>' + 
+                         '</div>' + 
+                         '</div>';
                 }
-            } else c += '<div class="card"><p style="text-align:center;">' + t('no_services_avail') + '</p></div>';
+            } else {
+                c += '<div class="card"><p style="text-align:center;">' + t('no_services_avail') + '</p></div>';
+            }
             document.getElementById('page-services').innerHTML = c;
         });
     }
@@ -499,18 +520,42 @@ function renderAdmin() {
             _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
                 _supabase.from('withdrawals').select('*').eq('status', 'pending').then(function(pwRes) {
                     _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
-                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs"><div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div><div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div><div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div><div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div></div><div id="a-serv">';                    
+                        
+                        var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs">';
+                        
+                        // التبويبات
+                        c += '<div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
+                        c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>'; // تم إضافة تبويب الإعدادات
+                        
+                        c += '</div><div id="a-serv">';
+                        
+                        // محتوى الخدمات
                         if(psRes.data) for(var j=0; j<psRes.data.length; j++) { var s = psRes.data[j]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + s.id + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + s.id + '\')">' + t('reject') + '</button></div></div>'; }
                         if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
+                        
+                        // محتوى السحب
                         c += '</div><div id="a-with" class="hidden">';
                         if(pwRes.data) for(var k=0; k<pwRes.data.length; k++) { var w = pwRes.data[k]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + w.amount + ' ' + t('currency') + '</strong><p style="font-size:12px; color:var(--text-muted);">' + w.bank_details + '</p><button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="approveWithdrawal(\'' + w.id + '\', \'' + w.user_id + '\', ' + w.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!pwRes.data || !pwRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
+                        
+                        // محتوى التحويلات
                         c += '</div><div id="a-trans" class="hidden">';
                         if(ptRes.data) for(var m=0; m<ptRes.data.length; m++) { var tx = ptRes.data[m]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + tx.amount + ' ' + t('currency') + '</strong><a href="' + tx.receipt_url + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;">' + t('view_receipt') + '</a><button class="btn btn-primary btn-sm" onclick="approveTransfer(\'' + tx.id + '\', \'' + tx.user_id + '\', ' + tx.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
+                        
+                        // محتوى البطاقات
                         c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div>';
+                        
+                        // الحاويات الفارغة للتبويبات الجديدة
                         c += '</div><div id="a-users" class="hidden"></div>';
                         c += '<div id="a-ads" class="hidden"></div>';
+                        c += '<div id="a-settings" class="hidden"></div>'; // تم إضافة حاوية الإعدادات
+                        
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -530,6 +575,7 @@ function adminTab(el, id) {
     if (id === 'a-cards') loadAdminCardsList();
     if (id === 'a-users') loadUsersList();
     if (id === 'a-ads') loadAdminAds();
+    if (id === 'a-settings') loadAdminSettings();
 }
 
 function approveService(id) { _supabase.from('services').update({ status: 'approved' }).eq('id', id).then(function() { Swal.fire(t('success'), t('approved_msg'), 'success'); renderAdmin(); }); }
@@ -725,6 +771,65 @@ function deleteAd(id) {
     });
 }
 
+// 👇 هنا بالضبط تضع الكود الجديد 👇
+function initiateChat(providerId, providerName) {
+    _supabase.from('chat_permissions').select('*').eq('client_id', currentUser.id).eq('provider_id', providerId).maybeSingle().then(function(res) {
+        if (res.data) {
+            openChat(providerId, providerName);
+        } else {
+            var price = platformSettings.chat_price || 10;
+            Swal.fire({
+                title: 'فتح محادثة',
+                text: 'لبدء محادثة مع ' + providerName + '، يجب دفع رسوم قدرها ' + price + ' د.ل تُخصم من محفظتك.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'دفع وفتح المحادثة',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: 'var(--primary)'
+            }).then(function(r) {
+                if (r.isConfirmed) {
+                    Swal.fire({ title: 'جاري الدفع...', didOpen: function() { Swal.showLoading(); } });
+                    _supabase.rpc('pay_for_chat', { p_provider_id: providerId, p_amount: price }).then(function(payRes) {
+                        if (payRes.error || !payRes.data.success) {
+                            Swal.fire('خطأ', payRes.error ? payRes.error.message : payRes.data.message, 'error');
+                        } else {
+                            Swal.fire('تم', 'تم الدفع بنجاح، يمكنك الآن المحادثة.', 'success');
+                            openChat(providerId, providerName);
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+
+function loadAdminSettings() {
+    var container = document.getElementById('a-settings');
+    if (!container) return;
+    
+    var currentPrice = platformSettings.chat_price || 10;
+    var html = '<div class="card" style="padding:20px;">';
+    html += '<h4 style="margin-bottom:15px; color:var(--primary);">إعدادات المنصة</h4>';
+    html += '<label style="font-weight:bold; display:block; margin-bottom:5px;">سعر فتح المحادثة (د.ل):</label>';
+    html += '<input type="number" id="chat-price-setting" value="' + currentPrice + '" style="margin-bottom:15px;">';
+    html += '<button class="btn btn-primary" onclick="updateChatPrice()">حفظ السعر</button>';
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function updateChatPrice() {
+    var newPrice = parseFloat(document.getElementById('chat-price-setting').value);
+    if (isNaN(newPrice) || newPrice < 0) return Swal.fire('تنبيه', 'أدخل سعراً صحيحاً', 'warning');
+    
+    Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
+    _supabase.from('platform_settings').update({ chat_price: newPrice }).eq('id', 1).then(function(res) {
+        if (res.error) return Swal.fire('خطأ', res.error.message, 'error');
+        platformSettings.chat_price = newPrice;
+        Swal.fire('تم', 'تم تحديث سعر المحادثة بنجاح', 'success');
+    });
+}
+// 👆 نهاية الكود الجديد 👆
+
 function checkSession() {
     _supabase.auth.getSession().then(function(res) {
         if (res.data.session) {
@@ -744,18 +849,33 @@ function checkSession() {
 }
 
 function renderMessages() {
-    document.getElementById('page-messages').innerHTML = '<div class="card"><p>جاري تحميل جهات الاتصال...</p></div>';
-    _supabase.from('profiles').select('id, full_name, role').neq('id', currentUser.id).then(function(res) {
-        var c = '<h2 style="color:var(--primary); margin-bottom:15px;">اختر مستخدماً للمحادثة</h2>';
+    document.getElementById('page-messages').innerHTML = '<div class="card"><p>جاري تحميل المحادثات...</p></div>';
+    
+    // جلب المحادثات المصرح بها فقط
+    var query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_provider_id_fkey(id, full_name, role)');
+    
+    if (userProfile.role === 'provider') {
+        // إذا كان مزود، نعرض له المستخدمين الذين دفعوا له
+        query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_client_id_fkey(id, full_name, role)').eq('provider_id', currentUser.id);
+    } else {
+        // إذا كان مستخدم، نعرض له المزودين الذين دفع لهم
+        query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_provider_id_fkey(id, full_name, role)').eq('client_id', currentUser.id);
+    }
+
+    query.then(function(res) {
+        var c = '<h2 style="color:var(--primary); margin-bottom:15px;">محادثاتي</h2>';
         if (res.data && res.data.length > 0) {
-            res.data.forEach(function(user) {
-                c += '<div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
-                     '<div><strong>' + user.full_name + '</strong><br><small style="color:var(--text-muted);">' + (user.role === 'provider' ? 'مزود خدمة' : 'مستخدم') + '</small></div>' +
-                     '<button class="btn btn-primary btn-sm" onclick="openChat(\'' + user.id + '\', \'' + user.full_name + '\')"><i class="fa-solid fa-comment"></i> محادثة</button>' +
-                     '</div>';
+            res.data.forEach(function(item) {
+                var otherUser = item.profiles;
+                if (otherUser) {
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
+                         '<div><strong>' + otherUser.full_name + '</strong><br><small style="color:var(--text-muted);">' + (otherUser.role === 'provider' ? 'مزود خدمة' : 'مستخدم') + '</small></div>' +
+                         '<button class="btn btn-primary btn-sm" onclick="openChat(\'' + otherUser.id + '\', \'' + otherUser.full_name + '\')"><i class="fa-solid fa-comment"></i> محادثة</button>' +
+                         '</div>';
+                }
             });
         } else {
-            c += '<div class="card"><p style="text-align:center;">لا يوجد مستخدمون آخرون.</p></div>';
+            c += '<div class="card"><p style="text-align:center;">لا توجد محادثات نشطة. يجب طلب خدمة أو فتح محادثة من صفحة الخدمات.</p></div>';
         }
         document.getElementById('page-messages').innerHTML = c;
     });
