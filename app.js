@@ -139,7 +139,7 @@ function renderHome() {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
         
         adDuration = Number(platformSettings.ad_duration || 3000);
-        adSpeed = Number(platformSettings.ad_speed || 300);
+        adSpeed = Number(platformSettings.ad_speed || 100);
 
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
             adsList = adsRes.data || [];
