@@ -10,7 +10,7 @@ var translations = {
 
 function t(key) { return translations[currentLang][key] || key; }
 
-// ================= دوال مساعدة للمتجر (أضيفت هنا بدون لمس شيء آخر) =================
+// ============ دوال مساعدة للمتجر (أضيفت فقط - لا تؤثر على شيء) ============
 function escHtml(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
         return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
@@ -24,7 +24,7 @@ function handleError(err) {
     if (Swal.isVisible()) Swal.close();
     Swal.fire(t('error'), (err && err.message) ? err.message : t('error'), 'error');
 }
-// =====================================================================================
+// ============================================================================
 
 function applyTranslations() {
     document.documentElement.lang = currentLang;
@@ -115,8 +115,7 @@ function setupUI() {
     }
     applyTranslations();
     if (typeof loadNotifications === 'function') loadNotifications();
-    
-    // السطر التالي أضيف لتحديث السلة عند الدخول
+    // سطر واحد فقط للمتجر (تحديث شارة السلة)
     if (typeof updateCartBadge === 'function') updateCartBadge();
 }
 
@@ -140,8 +139,7 @@ function navTo(page) {
     if (page === 'orders') renderOrders();
     if (page === 'messages') renderMessages();
     if (page === 'admin') renderAdmin();
-    
-    // السطرين التاليين أضيفا لربط المتجر والسلة
+    // سطرين فقط للمتجر
     if (page === 'cards') renderCardsPage();
     if (page === 'cart')  renderCart();
 }
@@ -591,7 +589,6 @@ function renderAdmin() {
                         c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>';
-                        
                         // إضافة تبويب المتجر
                         c += '<div class="tab" onclick="adminTab(this, \'a-store\')">المتجر</div>';
                         
@@ -612,7 +609,6 @@ function renderAdmin() {
                         c += '</div><div id="a-users" class="hidden"></div>';
                         c += '<div id="a-ads" class="hidden"></div>';
                         c += '<div id="a-settings" class="hidden"></div>';
-                        
                         // إضافة حاوية المتجر
                         c += '<div id="a-store" class="hidden"></div>';
                         
@@ -628,8 +624,7 @@ function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    
-    // إضافة a-store إلى القائمة
+    // إضافة a-store
     var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users', 'a-ads', 'a-settings', 'a-store'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
@@ -638,8 +633,7 @@ function adminTab(el, id) {
     if (id === 'a-users') loadUsersList();
     if (id === 'a-ads') loadAdminAds();
     if (id === 'a-settings') loadAdminSettings();
-    
-    // إضافة تشغيل دالة المتجر
+    // إضافة تفعيل المتجر
     if (id === 'a-store') loadAdminStore();
 }
 
@@ -878,10 +872,66 @@ function checkSession() {
     });
 }
 
+// ================= 11. التشغيل (DOMContentLoaded) =================
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== الجزء 1: الإعدادات الأساسية (لم يتغير) =====
     var savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     applyTranslations();
+
+    // ===== الجزء 2: إنشاء أزرار المتجر والسلة تلقائياً =====
+    var navMessages = document.getElementById('nav-messages');
+    if (navMessages && !document.getElementById('nav-cards')) {
+        var navCards = document.createElement('div');
+        navCards.className = 'nav-item';
+        navCards.id = 'nav-cards';
+        navCards.setAttribute('onclick', "navTo('cards')");
+        navCards.innerHTML = '<i class="fa-solid fa-store"></i><span>المتجر</span>';
+
+        var navCart = document.createElement('div');
+        navCart.className = 'nav-item';
+        navCart.id = 'nav-cart';
+        navCart.style.position = 'relative';
+        navCart.setAttribute('onclick', "navTo('cart')");
+        navCart.innerHTML = '<i class="fa-solid fa-cart-shopping"></i><span>السلة</span><span id="cart-badge" class="hidden" style="position:absolute; top:-4px; right:0; background:var(--accent); color:white; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">0</span>';
+
+        navMessages.parentNode.insertBefore(navCards, navMessages.nextSibling);
+        navCards.parentNode.insertBefore(navCart, navCards.nextSibling);
+    }
+
+    // ===== الجزء 3: إنشاء حاويات الصفحات تلقائياً =====
+    var pageMessages = document.getElementById('page-messages');
+    if (pageMessages && !document.getElementById('page-cards')) {
+        var pageCards = document.createElement('div');
+        pageCards.id = 'page-cards';
+        pageCards.className = 'page hidden';
+
+        var pageCart = document.createElement('div');
+        pageCart.id = 'page-cart';
+        pageCart.className = 'page hidden';
+
+        pageMessages.parentNode.insertBefore(pageCards, pageMessages.nextSibling);
+        pageCards.parentNode.insertBefore(pageCart, pageCards.nextSibling);
+    }
+
+    // ===== الجزء 4: تحميل مكتبة الباركود =====
+    if (!window.JsBarcode) {
+        var jsb = document.createElement('script');
+        jsb.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+        document.head.appendChild(jsb);
+    }
+
+    // ===== الجزء 5: تحميل ملف cards.js =====
+    if (typeof renderCardsPage !== 'function') {
+        var cardsScript = document.createElement('script');
+        cardsScript.src = 'cards.js';
+        cardsScript.onload = function() {
+            if (typeof updateCartBadge === 'function' && currentUser) updateCartBadge();
+        };
+        document.head.appendChild(cardsScript);
+    }
+
+    // ===== الجزء 6: الجلسة والأزرار (لم يتغير) =====
     checkSession();
 
     var btnLogin = document.getElementById('btn-do-login');
