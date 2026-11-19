@@ -10,7 +10,7 @@ var translations = {
 
 function t(key) { return translations[currentLang][key] || key; }
 
-// ============ دوال مساعدة للمتجر (أضيفت فقط - لا تؤثر على شيء) ============
+// ============ دوال مساعدة للمتجر ============
 function escHtml(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
         return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
@@ -24,7 +24,7 @@ function handleError(err) {
     if (Swal.isVisible()) Swal.close();
     Swal.fire(t('error'), (err && err.message) ? err.message : t('error'), 'error');
 }
-// ============================================================================
+// ============================================
 
 function applyTranslations() {
     document.documentElement.lang = currentLang;
@@ -67,7 +67,6 @@ function doSignup() {
     var pw = document.getElementById('signup-password').value;
     var r = document.getElementById('signup-role').value;
     if (!n || !e || !p || !pw) return Swal.fire(t('alert'), t('fill_fields'), 'warning');
-    
     Swal.fire({ title: t('creating'), allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     _supabase.auth.signUp({ email: e, password: pw, options: { data: { full_name: n, role: r, phone: p } } }).then(function(res) {
         if (res.error) { Swal.fire(t('error'), res.error.message, 'error'); return; }
@@ -81,16 +80,13 @@ function doLogin() {
     var email = document.getElementById('login-email').value.trim();
     var password = document.getElementById('login-password').value;
     if (!email || !password) return Swal.fire(t('alert'), t('fill_fields'), 'warning');
-    
     Swal.fire({ title: t('verifying'), allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     _supabase.auth.signInWithPassword({ email: email, password: password }).then(function(res) {
         if (res.error) { Swal.fire(t('login_failed'), res.error.message, 'error'); return; }
-        
         _supabase.from('profiles').select('*').eq('id', res.data.user.id).maybeSingle().then(function(pRes) {
             _supabase.from('platform_settings').select('*').eq('id', 1).maybeSingle().then(function(sRes) {
                 Swal.close();
                 if (!pRes.data) { Swal.fire(t('error'), t('profile_not_found'), 'error'); return; }
-                
                 currentUser = res.data.user;
                 userProfile = pRes.data;
                 platformSettings = sRes.data || {};
@@ -107,7 +103,6 @@ function setupUI() {
     document.getElementById('nav-admin').classList.add('hidden');
     document.getElementById('nav-services').classList.remove('hidden');
     document.getElementById('nav-orders').classList.remove('hidden');
-
     if (userProfile.role === 'admin') {
         document.getElementById('nav-admin').classList.remove('hidden');
         document.getElementById('nav-services').classList.add('hidden');
@@ -115,7 +110,6 @@ function setupUI() {
     }
     applyTranslations();
     if (typeof loadNotifications === 'function') loadNotifications();
-    // سطر واحد فقط للمتجر (تحديث شارة السلة)
     if (typeof updateCartBadge === 'function') updateCartBadge();
 }
 
@@ -127,21 +121,19 @@ function navTo(page) {
     for (var i = 0; i < pages.length; i++) pages[i].classList.add('hidden');
     var target = document.getElementById('page-' + page);
     if (target) target.classList.remove('hidden');
-    
     var navs = document.querySelectorAll('.nav-item');
     for (var j = 0; j < navs.length; j++) navs[j].classList.remove('active');
     var navTarget = document.getElementById('nav-' + page);
     if (navTarget) navTarget.classList.add('active');
-    
     if (page === 'home') renderHome();
     if (page === 'wallet') renderWallet();
     if (page === 'services') renderServices();
     if (page === 'orders') renderOrders();
     if (page === 'messages') renderMessages();
     if (page === 'admin') renderAdmin();
-    // سطرين فقط للمتجر
     if (page === 'cards') renderCardsPage();
-    if (page === 'cart')  renderCart();
+    if (page === 'cart') renderCart();
+    if (page === 'my-purchases') renderMyPurchases();
 }
 
 function showProfile() {
@@ -163,7 +155,6 @@ var adStartTime = 0;
 function renderHome() {
     _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
         var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
-        
         var savedSec = localStorage.getItem('ad_duration_sec');
         if (savedSec) adDuration = Number(savedSec) * 1000;
         var savedSpeed = localStorage.getItem('ad_speed_ms');
@@ -172,71 +163,54 @@ function renderHome() {
         _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(adsRes) {
             adsList = adsRes.data || [];
             var adsHtml = '';
-
             if (adsList.length > 0) {
                 var bars = '';
                 for (var i = 0; i < adsList.length; i++) {
                     bars += '<div style="flex:1; height:3px; background:rgba(150,150,150,0.3); border-radius:3px; overflow:hidden;"><div id="ad-bar-' + i + '" style="width:0%; height:100%; background:var(--accent); transition:width 0.1s linear;"></div></div>';
                 }
-                adsHtml = '<div id="pro-ads-box" style="margin: 0 auto 15px auto; max-width: 100%; user-select: none; -webkit-user-select: none;">' +
-                          '<div style="display:flex; gap:5px; margin-bottom:8px; padding:0 5px;">' + bars + '</div>' +
-                          '<div id="ads-touch-area" style="position:relative; width:100%; border-radius:15px; overflow:hidden; cursor:pointer; touch-action:pan-y; text-align:center;">' +
-                          '<img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity ' + adSpeed + 'ms ease;">' +
-                          '</div></div>';
+                adsHtml = '<div id="pro-ads-box" style="margin: 0 auto 15px auto; max-width: 100%; user-select: none; -webkit-user-select: none;"><div style="display:flex; gap:5px; margin-bottom:8px; padding:0 5px;">' + bars + '</div><div id="ads-touch-area" style="position:relative; width:100%; border-radius:15px; overflow:hidden; cursor:pointer; touch-action:pan-y; text-align:center;"><img id="current-ad-img" src="' + adsList[0].image_url + '" style="width:100%; max-height:190px; object-fit:cover; border-radius:15px; display:block; margin:0 auto; transition:opacity ' + adSpeed + 'ms ease;"></div></div>';
             }
 
             var c = adsHtml + '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;"><p style="font-size:14px; font-weight:600; opacity:0.9;">' + t('welcome') + userProfile.full_name + '</p><div class="balance" style="color:white;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div><p style="font-size:12px; opacity:0.8;">' + t('balance_title') + '</p></div>';
-            
+
+            // اختصار المتجر في الرئيسية (لغير المدير)
+            if (userProfile.role !== 'admin') {
+                c += '<div class="card" style="padding:15px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; cursor:pointer;" onclick="navTo(\'cards\')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:16px; font-weight:bold;"><i class="fa-solid fa-store"></i> متجر البطاقات</div><div style="font-size:12px; opacity:0.85; margin-top:3px;">بطاقات، ألعاب، اشتراكات...</div></div><i class="fa-solid fa-chevron-left" style="font-size:20px;"></i></div></div>';
+            }
+
             if (userProfile.role === 'provider') c += '<button class="btn btn-accent" onclick="showAddService()"><i class="fa-solid fa-plus"></i> ' + t('add_service') + '</button>';
             else if (userProfile.role === 'user') c += '<div class="grid-2"><button class="btn btn-accent" onclick="navTo(\'wallet\')"><i class="fa-solid fa-plus-circle"></i> ' + t('deposit') + '</button><button class="btn btn-primary" onclick="navTo(\'services\')"><i class="fa-solid fa-search"></i> ' + t('request_service') + '</button></div>';
             else if (userProfile.role === 'admin') c += '<button class="btn btn-accent" onclick="navTo(\'admin\')"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_panel_btn') + '</button>';
-            
-            document.getElementById('page-home').innerHTML = c;
 
-            if (adsList.length > 0) {
-                setupProAdsControls();
-                showProAdSlide(0);
-            }
+            document.getElementById('page-home').innerHTML = c;
+            if (adsList.length > 0) { setupProAdsControls(); showProAdSlide(0); }
         });
     });
 }
 
 function showProAdSlide(index) {
-    clearTimeout(adTimer);
-    clearInterval(progressInterval);
+    clearTimeout(adTimer); clearInterval(progressInterval);
     if (adsList.length === 0) return;
-
     if (index >= adsList.length) index = 0;
     if (index < 0) index = adsList.length - 1;
     currentAdIndex = index;
-
     var imgEl = document.getElementById('current-ad-img');
     if (imgEl) {
         imgEl.style.transition = 'opacity ' + adSpeed + 'ms ease';
         imgEl.style.opacity = '0';
-        setTimeout(function() {
-            imgEl.src = adsList[currentAdIndex].image_url;
-            imgEl.style.opacity = '1';
-        }, adSpeed);
+        setTimeout(function() { imgEl.src = adsList[currentAdIndex].image_url; imgEl.style.opacity = '1'; }, adSpeed);
     }
-
     for (var i = 0; i < adsList.length; i++) {
         var bar = document.getElementById('ad-bar-' + i);
-        if (bar) {
-            if (i < currentAdIndex) bar.style.width = '100%';
-            else bar.style.width = '0%';
-        }
+        if (bar) { if (i < currentAdIndex) bar.style.width = '100%'; else bar.style.width = '0%'; }
     }
-
     adRemainingTime = adDuration;
     startProAdTimer();
 }
 
 function startProAdTimer() {
-    isAdPaused = false;
-    adStartTime = Date.now();
+    isAdPaused = false; adStartTime = Date.now();
     var currentBar = document.getElementById('ad-bar-' + currentAdIndex);
-
     progressInterval = setInterval(function() {
         if (!isAdPaused) {
             var elapsed = Date.now() - adStartTime;
@@ -245,46 +219,23 @@ function startProAdTimer() {
             if (currentBar) currentBar.style.width = percent + '%';
         }
     }, 50);
-
-    adTimer = setTimeout(function() {
-        showProAdSlide(currentAdIndex + 1);
-    }, adRemainingTime);
+    adTimer = setTimeout(function() { showProAdSlide(currentAdIndex + 1); }, adRemainingTime);
 }
 
-function pauseProAd() {
-    if (isAdPaused) return;
-    isAdPaused = true;
-    clearTimeout(adTimer);
-    clearInterval(progressInterval);
-    adRemainingTime -= (Date.now() - adStartTime);
-    if (adRemainingTime < 0) adRemainingTime = 0;
-}
-
-function resumeProAd() {
-    if (!isAdPaused) return;
-    startProAdTimer();
-}
+function pauseProAd() { if (isAdPaused) return; isAdPaused = true; clearTimeout(adTimer); clearInterval(progressInterval); adRemainingTime -= (Date.now() - adStartTime); if (adRemainingTime < 0) adRemainingTime = 0; }
+function resumeProAd() { if (!isAdPaused) return; startProAdTimer(); }
 
 function setupProAdsControls() {
     var box = document.getElementById('ads-touch-area');
     if (!box) return;
     var touchStartX = 0;
-
-    box.addEventListener('touchstart', function(e) {
-        touchStartX = e.touches[0].clientX;
-        pauseProAd();
-    }, { passive: true });
-
+    box.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; pauseProAd(); }, { passive: true });
     box.addEventListener('touchend', function(e) {
         var touchEndX = e.changedTouches[0].clientX;
         var diff = touchStartX - touchEndX;
         resumeProAd();
-        if (Math.abs(diff) > 40) {
-            if (diff > 0) showProAdSlide(currentAdIndex + 1);
-            else showProAdSlide(currentAdIndex - 1);
-        }
+        if (Math.abs(diff) > 40) { if (diff > 0) showProAdSlide(currentAdIndex + 1); else showProAdSlide(currentAdIndex - 1); }
     });
-
     box.addEventListener('mousedown', pauseProAd);
     box.addEventListener('mouseup', resumeProAd);
     box.addEventListener('mouseleave', function() { if (isAdPaused) resumeProAd(); });
@@ -292,7 +243,11 @@ function setupProAdsControls() {
 
 // ================= 5. المحفظة =================
 function renderWallet() {
-    document.getElementById('page-wallet').innerHTML = '<div class="card"><div class="tabs"><div class="tab active" onclick="switchTab(this, \'w-card\')">' + t('tab_card') + '</div><div class="tab" onclick="switchTab(this, \'w-bank\')">' + t('tab_bank') + '</div><div class="tab" onclick="switchTab(this, \'w-with\')">' + t('tab_withdraw') + '</div><div class="tab" onclick="switchTab(this, \'w-trans\')">' + t('tab_transfer') + '</div></div><div id="w-card"><input type="text" id="card-code" placeholder="' + t('card_code') + '"><button class="btn btn-primary" onclick="redeemCard()">' + t('confirm') + '</button></div><div id="w-bank" class="hidden"><div class="bank-details"><p><span>' + t('bank') + ':</span> ' + (platformSettings.bank_name || '-') + '</p><p><span>' + t('name') + ':</span> ' + (platformSettings.account_name || '-') + '</p><p><span>' + t('account') + ':</span> ' + (platformSettings.account_number || '-') + '</p><p><span>IBAN:</span> ' + (platformSettings.iban || '-') + '</p></div><input type="number" id="bank-amt" placeholder="' + t('transfer_amt') + '"><input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);"><button class="btn btn-accent" onclick="submitBankTransfer()">' + t('send_review') + '</button></div><div id="w-with" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('withdraw_note') + '</p><input type="number" id="with-amt" placeholder="' + t('amount') + '"><input type="text" id="with-bank" placeholder="' + t('bank_name') + '"><input type="text" id="with-acc" placeholder="' + t('acc_num') + '"><button class="btn btn-primary" onclick="requestWithdrawal()">' + t('send') + '</button></div><div id="w-trans" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('transfer_note') + '</p><input type="text" id="trans-phone" placeholder="' + t('phone') + '"><button class="btn btn-accent" onclick="searchPhone()">' + t('search') + '</button><div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div><input type="number" id="trans-amt" placeholder="' + t('amount') + '"><button class="btn btn-primary" onclick="executeTransfer()">' + t('transfer_now') + '</button></div></div>';
+    _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
+        var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
+        var balCard = '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; margin-bottom:15px;"><p style="font-size:14px; opacity:0.9;">' + t('balance_title') + '</p><div style="font-size:32px; font-weight:bold;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div></div>';
+        document.getElementById('page-wallet').innerHTML = balCard + '<div class="card"><div class="tabs"><div class="tab active" onclick="switchTab(this, \'w-card\')">' + t('tab_card') + '</div><div class="tab" onclick="switchTab(this, \'w-bank\')">' + t('tab_bank') + '</div><div class="tab" onclick="switchTab(this, \'w-with\')">' + t('tab_withdraw') + '</div><div class="tab" onclick="switchTab(this, \'w-trans\')">' + t('tab_transfer') + '</div></div><div id="w-card"><input type="text" id="card-code" placeholder="' + t('card_code') + '"><button class="btn btn-primary" onclick="redeemCard()">' + t('confirm') + '</button></div><div id="w-bank" class="hidden"><div class="bank-details"><p><span>' + t('bank') + ':</span> ' + (platformSettings.bank_name || '-') + '</p><p><span>' + t('name') + ':</span> ' + (platformSettings.account_name || '-') + '</p><p><span>' + t('account') + ':</span> ' + (platformSettings.account_number || '-') + '</p><p><span>IBAN:</span> ' + (platformSettings.iban || '-') + '</p></div><input type="number" id="bank-amt" placeholder="' + t('transfer_amt') + '"><input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);"><button class="btn btn-accent" onclick="submitBankTransfer()">' + t('send_review') + '</button></div><div id="w-with" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('withdraw_note') + '</p><input type="number" id="with-amt" placeholder="' + t('amount') + '"><input type="text" id="with-bank" placeholder="' + t('bank_name') + '"><input type="text" id="with-acc" placeholder="' + t('acc_num') + '"><button class="btn btn-primary" onclick="requestWithdrawal()">' + t('send') + '</button></div><div id="w-trans" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('transfer_note') + '</p><input type="text" id="trans-phone" placeholder="' + t('phone') + '"><button class="btn btn-accent" onclick="searchPhone()">' + t('search') + '</button><div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div><input type="number" id="trans-amt" placeholder="' + t('amount') + '"><button class="btn btn-primary" onclick="executeTransfer()">' + t('transfer_now') + '</button></div></div>';
+    });
 }
 
 function switchTab(el, id) {
@@ -376,9 +331,7 @@ function renderServices() {
                     var s = res.data[i];
                     c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + '<strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<p style="font-size:12px; color:var(--text-muted);">' + t('status') + ': ' + (s.status === 'approved' ? '✅ ' + t('approved') : (s.status === 'pending' ? '⏳ ' + t('pending') : '❌ ' + t('rejected'))) + '</p></div>';
                 }
-            } else {
-                c += '<div class="card"><p style="text-align:center;">' + t('no_services') + '</p></div>';
-            }
+            } else { c += '<div class="card"><p style="text-align:center;">' + t('no_services') + '</p></div>'; }
             document.getElementById('page-services').innerHTML = c;
         });
     } else {
@@ -387,35 +340,16 @@ function renderServices() {
                 for (var i=0; i<res.data.length; i++) {
                     var s = res.data[i];
                     var providerName = (s.profiles && s.profiles.full_name) ? s.profiles.full_name.replace(/'/g, "\\'") : 'المزود';
-                    c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + 
-                         (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + 
-                         '<h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4>' + 
-                         '<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p>' + 
-                         '<div style="display:flex; justify-content:space-between; align-items:center;">' + 
-                             '<strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong>' + 
-                             '<div style="display:flex; gap:5px;">' + 
-                                 '<button class="btn btn-accent btn-sm" style="margin:0;" onclick="initiateChat(\'' + s.provider_id + '\', \'' + providerName + '\')"><i class="fa-solid fa-comment"></i></button>' + 
-                                 '<button class="btn btn-primary btn-sm" style="margin:0;" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button>' + 
-                             '</div>' + 
-                         '</div>' + 
-                         '</div>';
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px;">' + (s.image_url ? '<img src="' + s.image_url + '" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;">' : '') + '<h4 style="color:var(--primary); margin-bottom:5px;">' + s.title + '</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + (s.description || '') + '</p><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--accent);">' + s.price + ' ' + t('currency') + '</strong><div style="display:flex; gap:5px;"><button class="btn btn-accent btn-sm" style="margin:0;" onclick="initiateChat(\'' + s.provider_id + '\', \'' + providerName + '\')"><i class="fa-solid fa-comment"></i></button><button class="btn btn-primary btn-sm" style="margin:0;" onclick="orderService(\'' + s.id + '\')">' + t('request') + '</button></div></div></div>';
                 }
-            } else {
-                c += '<div class="card"><p style="text-align:center;">' + t('no_services_avail') + '</p></div>';
-            }
+            } else { c += '<div class="card"><p style="text-align:center;">' + t('no_services_avail') + '</p></div>'; }
             document.getElementById('page-services').innerHTML = c;
         });
     }
 }
 
 function showAddService() {
-    Swal.fire({ 
-        title: t('add_service_title'), 
-        html: '<input id="s-t" class="swal2-input" placeholder="' + t('name') + '"><input id="s-p" class="swal2-input" type="number" placeholder="' + t('price') + '"><textarea id="s-d" class="swal2-textarea" placeholder="' + t('desc') + '"></textarea><input id="s-img" type="file" class="swal2-file" accept="image/*" style="margin-top:10px;">', 
-        confirmButtonText: t('send'), 
-        showCancelButton: true, 
-        cancelButtonText: t('cancel') 
-    }).then(function(r) {
+    Swal.fire({ title: t('add_service_title'), html: '<input id="s-t" class="swal2-input" placeholder="' + t('name') + '"><input id="s-p" class="swal2-input" type="number" placeholder="' + t('price') + '"><textarea id="s-d" class="swal2-textarea" placeholder="' + t('desc') + '"></textarea><input id="s-img" type="file" class="swal2-file" accept="image/*" style="margin-top:10px;">', confirmButtonText: t('send'), showCancelButton: true, cancelButtonText: t('cancel') }).then(function(r) {
         if (r.isConfirmed) {
             var title = document.getElementById('s-t').value;
             var price = document.getElementById('s-p').value;
@@ -465,14 +399,14 @@ function orderService(id) {
 
 function initiateChat(providerId, providerName) {
     _supabase.from('chat_permissions').select('*').eq('client_id', currentUser.id).eq('provider_id', providerId).maybeSingle().then(function(res) {
-        if (res.data) { openChat(providerId, providerName); } 
+        if (res.data) { openChat(providerId, providerName); }
         else {
             var price = platformSettings.chat_price || 10;
             Swal.fire({ title: 'فتح محادثة', text: 'لبدء محادثة مع ' + providerName + '، يجب دفع رسوم قدرها ' + price + ' د.ل تُخصم من محفظتك.', icon: 'info', showCancelButton: true, confirmButtonText: 'دفع وفتح المحادثة', cancelButtonText: 'إلغاء', confirmButtonColor: 'var(--primary)' }).then(function(r) {
                 if (r.isConfirmed) {
                     Swal.fire({ title: 'جاري الدفع...', didOpen: function() { Swal.showLoading(); } });
                     _supabase.rpc('pay_for_chat', { p_provider_id: providerId, p_amount: price }).then(function(payRes) {
-                        if (payRes.error || !payRes.data.success) { Swal.fire('خطأ', payRes.error ? payRes.error.message : payRes.data.message, 'error'); } 
+                        if (payRes.error || !payRes.data.success) { Swal.fire('خطأ', payRes.error ? payRes.error.message : payRes.data.message, 'error'); }
                         else { Swal.fire('تم', 'تم الدفع بنجاح', 'success'); openChat(providerId, providerName); }
                     });
                 }
@@ -485,19 +419,15 @@ function initiateChat(providerId, providerName) {
 function renderMessages() {
     document.getElementById('page-messages').innerHTML = '<div class="card"><p>جاري تحميل المحادثات...</p></div>';
     var query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_provider_id_fkey(id, full_name, role)');
-    if (userProfile.role === 'provider') { query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_client_id_fkey(id, full_name, role)').eq('provider_id', currentUser.id); } 
+    if (userProfile.role === 'provider') { query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_client_id_fkey(id, full_name, role)').eq('provider_id', currentUser.id); }
     else { query = _supabase.from('chat_permissions').select('*, profiles!chat_permissions_provider_id_fkey(id, full_name, role)').eq('client_id', currentUser.id); }
-
     query.then(function(res) {
         var c = '<h2 style="color:var(--primary); margin-bottom:15px;">محادثاتي</h2>';
         if (res.data && res.data.length > 0) {
             res.data.forEach(function(item) {
                 var otherUser = item.profiles;
                 if (otherUser) {
-                    c += '<div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
-                         '<div><strong>' + otherUser.full_name + '</strong><br><small style="color:var(--text-muted);">' + (otherUser.role === 'provider' ? 'مزود خدمة' : 'مستخدم') + '</small></div>' +
-                         '<button class="btn btn-primary btn-sm" onclick="openChat(\'' + otherUser.id + '\', \'' + otherUser.full_name + '\')"><i class="fa-solid fa-comment"></i> محادثة</button>' +
-                         '</div>';
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong>' + otherUser.full_name + '</strong><br><small style="color:var(--text-muted);">' + (otherUser.role === 'provider' ? 'مزود خدمة' : 'مستخدم') + '</small></div><button class="btn btn-primary btn-sm" onclick="openChat(\'' + otherUser.id + '\', \'' + otherUser.full_name + '\')"><i class="fa-solid fa-comment"></i> محادثة</button></div>';
                 }
             });
         } else { c += '<div class="card"><p style="text-align:center;">لا توجد محادثات نشطة.</p></div>'; }
@@ -512,9 +442,7 @@ function openChat(userId, userName) {
     currentChatUserId = userId;
     Swal.fire({
         title: 'محادثة مع ' + userName,
-        html: '<div id="chat-box" style="height:250px; overflow-y:auto; border:1px solid #ddd; border-radius:8px; padding:10px; margin-bottom:10px; background:#f9f9f9; text-align:right;"></div>' +
-              '<input id="chat-input" class="swal2-input" placeholder="اكتب رسالتك هنا..." style="margin-bottom:10px;">' +
-              '<button class="btn btn-primary" onclick="sendChatMessage()" style="margin-top:0;">إرسال</button>',
+        html: '<div id="chat-box" style="height:250px; overflow-y:auto; border:1px solid #ddd; border-radius:8px; padding:10px; margin-bottom:10px; background:#f9f9f9; text-align:right;"></div><input id="chat-input" class="swal2-input" placeholder="اكتب رسالتك هنا..." style="margin-bottom:10px;"><button class="btn btn-primary" onclick="sendChatMessage()" style="margin-top:0;">إرسال</button>',
         showConfirmButton: false, showCloseButton: true,
         didOpen: function() { loadChatMessages(); chatInterval = setInterval(loadChatMessages, 3000); },
         willClose: function() { clearInterval(chatInterval); currentChatUserId = null; }
@@ -542,9 +470,9 @@ function sendChatMessage() {
     var input = document.getElementById('chat-input');
     var msg = input.value.trim();
     if (!msg || !currentChatUserId) return;
-    input.value = ''; 
+    input.value = '';
     _supabase.from('messages').insert([{ sender_id: currentUser.id, receiver_id: currentChatUserId, message: msg }]).then(function(res) {
-        if (res.error) { Swal.showValidationMessage('فشل الإرسال: ' + res.error.message); } 
+        if (res.error) { Swal.showValidationMessage('فشل الإرسال: ' + res.error.message); }
         else { loadChatMessages(); }
     });
 }
@@ -579,9 +507,7 @@ function renderAdmin() {
             _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
                 _supabase.from('withdrawals').select('*').eq('status', 'pending').then(function(pwRes) {
                     _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
-                        
                         var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2><div class="grid-2" style="margin-bottom:15px;"><div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div><div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div></div><div class="tabs">';
-                        
                         c += '<div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div>';
@@ -589,29 +515,21 @@ function renderAdmin() {
                         c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>';
-                        // إضافة تبويب المتجر
                         c += '<div class="tab" onclick="adminTab(this, \'a-store\')">المتجر</div>';
-                        
                         c += '</div><div id="a-serv">';
                         if(psRes.data) for(var j=0; j<psRes.data.length; j++) { var s = psRes.data[j]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + s.id + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + s.id + '\')">' + t('reject') + '</button></div></div>'; }
                         if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
-                        
                         c += '</div><div id="a-with" class="hidden">';
                         if(pwRes.data) for(var k=0; k<pwRes.data.length; k++) { var w = pwRes.data[k]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + w.amount + ' ' + t('currency') + '</strong><p style="font-size:12px; color:var(--text-muted);">' + w.bank_details + '</p><button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="approveWithdrawal(\'' + w.id + '\', \'' + w.user_id + '\', ' + w.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!pwRes.data || !pwRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
-                        
                         c += '</div><div id="a-trans" class="hidden">';
                         if(ptRes.data) for(var m=0; m<ptRes.data.length; m++) { var tx = ptRes.data[m]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + t('amount') + ': ' + tx.amount + ' ' + t('currency') + '</strong><a href="' + tx.receipt_url + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;">' + t('view_receipt') + '</a><button class="btn btn-primary btn-sm" onclick="approveTransfer(\'' + tx.id + '\', \'' + tx.user_id + '\', ' + tx.amount + ')">' + t('approve') + '</button></div>'; }
                         if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
-                        
                         c += '</div><div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div>';
-                        
                         c += '</div><div id="a-users" class="hidden"></div>';
                         c += '<div id="a-ads" class="hidden"></div>';
                         c += '<div id="a-settings" class="hidden"></div>';
-                        // إضافة حاوية المتجر
                         c += '<div id="a-store" class="hidden"></div>';
-                        
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -624,16 +542,13 @@ function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    // إضافة a-store
     var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users', 'a-ads', 'a-settings', 'a-store'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
-    
     if (id === 'a-cards') loadAdminCardsList();
     if (id === 'a-users') loadUsersList();
     if (id === 'a-ads') loadAdminAds();
     if (id === 'a-settings') loadAdminSettings();
-    // إضافة تفعيل المتجر
     if (id === 'a-store') loadAdminStore();
 }
 
@@ -683,7 +598,6 @@ function generateCards() {
         } else { Swal.fire(t('error'), 'لم يتم توليد أي بطاقات', 'error'); }
     });
 }
-
 function loadAdminCardsList() {
     var tableContainer = document.getElementById('cards-list');
     if (!tableContainer) return;
@@ -704,7 +618,6 @@ function loadAdminCardsList() {
         tableContainer.innerHTML = html;
     });
 }
-
 function loadUsersList() {
     var container = document.getElementById('a-users');
     if (!container) return;
@@ -725,15 +638,12 @@ function loadUsersList() {
         container.innerHTML = html;
     });
 }
-
 function loadAdminAds() {
     var container = document.getElementById('a-ads');
     if (!container) return;
     container.innerHTML = '<div class="card"><p>جاري التحميل...</p></div>';
-    
     var savedSec = localStorage.getItem('ad_duration_sec') || 5;
     var savedSpeed = localStorage.getItem('ad_speed_ms') || 300;
-
     _supabase.from('ads').select('*').order('created_at', { ascending: false }).then(function(res) {
         var html = '<div class="card" style="padding:15px; margin-bottom:15px; border: 2px solid var(--primary);">';
         html += '<h4 style="margin-bottom:10px; color:var(--primary);">إعدادات العرض والسرعة</h4>';
@@ -743,29 +653,17 @@ function loadAdminAds() {
         html += '<input type="number" id="ad-speed-input" value="' + savedSpeed + '" min="50" step="50" placeholder="مثال: 300" style="margin-bottom:15px;">';
         html += '<button class="btn btn-primary" onclick="saveAdSettings()" style="margin:0;">حفظ الإعدادات</button>';
         html += '</div>';
-
-        html += '<div class="card" style="padding:15px; margin-bottom:15px;">';
-        html += '<h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4>';
-        html += '<input type="file" id="ad-img" accept="image/*" class="swal2-file" style="margin-bottom:10px;">';
-        html += '<button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button>';
-        html += '</div>';
-
+        html += '<div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">إضافة إعلان جديد</h4><input type="file" id="ad-img" accept="image/*" class="swal2-file" style="margin-bottom:10px;"><button class="btn btn-accent" onclick="uploadAd()">رفع الإعلان</button></div>';
         html += '<div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">الإعلانات الحالية</h4>';
         if (res.data && res.data.length > 0) {
             res.data.forEach(function(ad) {
-                html += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;">';
-                html += '<img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;">';
-                html += '<button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button>';
-                html += '</div>';
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:10px 0;"><img src="' + ad.image_url + '" style="width:80px; height:50px; object-fit:cover; border-radius:8px;"><button class="btn btn-danger btn-sm" onclick="deleteAd(\'' + ad.id + '\')" style="margin:0;">حذف</button></div>';
             });
-        } else {
-            html += '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>';
-        }
+        } else { html += '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>'; }
         html += '</div>';
         container.innerHTML = html;
     });
 }
-
 function saveAdSettings() {
     var sec = document.getElementById('ad-sec-input').value;
     var speed = document.getElementById('ad-speed-input').value;
@@ -776,7 +674,6 @@ function saveAdSettings() {
     adSpeed = Number(speed);
     Swal.fire('تم', 'تم حفظ الإعدادات (الوقت: ' + sec + 'ث، السرعة: ' + speed + 'مللي)', 'success');
 }
-
 function uploadAd() {
     var fileInput = document.getElementById('ad-img');
     var file = fileInput.files[0];
@@ -793,31 +690,20 @@ function uploadAd() {
         });
     });
 }
-
 function deleteAd(id) {
     Swal.fire({ title: 'حذف الإعلان؟', icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم، احذف', cancelButtonText: 'إلغاء' }).then(function(r) {
         if (r.isConfirmed) {
-            _supabase.from('ads').delete().eq('id', id).then(function() {
-                Swal.fire('تم', 'تم الحذف', 'success');
-                loadAdminAds();
-            });
+            _supabase.from('ads').delete().eq('id', id).then(function() { Swal.fire('تم', 'تم الحذف', 'success'); loadAdminAds(); });
         }
     });
 }
-
 function loadAdminSettings() {
     var container = document.getElementById('a-settings');
     if (!container) return;
     var currentPrice = platformSettings.chat_price || 10;
-    var html = '<div class="card" style="padding:20px;">';
-    html += '<h4 style="margin-bottom:15px; color:var(--primary);">إعدادات المنصة</h4>';
-    html += '<label style="font-weight:bold; display:block; margin-bottom:5px;">سعر فتح المحادثة (د.ل):</label>';
-    html += '<input type="number" id="chat-price-setting" value="' + currentPrice + '" style="margin-bottom:15px;">';
-    html += '<button class="btn btn-primary" onclick="updateChatPrice()">حفظ السعر</button>';
-    html += '</div>';
+    var html = '<div class="card" style="padding:20px;"><h4 style="margin-bottom:15px; color:var(--primary);">إعدادات المنصة</h4><label style="font-weight:bold; display:block; margin-bottom:5px;">سعر فتح المحادثة (د.ل):</label><input type="number" id="chat-price-setting" value="' + currentPrice + '" style="margin-bottom:15px;"><button class="btn btn-primary" onclick="updateChatPrice()">حفظ السعر</button></div>';
     container.innerHTML = html;
 }
-
 function updateChatPrice() {
     var newPrice = parseFloat(document.getElementById('chat-price-setting').value);
     if (isNaN(newPrice) || newPrice < 0) return Swal.fire('تنبيه', 'أدخل سعراً صحيحاً', 'warning');
@@ -829,18 +715,14 @@ function updateChatPrice() {
     });
 }
 
-// ================= 10. الإشعارات والجلسة والتشغيل =================
+// ================= 10. الإشعارات والجلسة =================
 function loadNotifications() {
     if (!currentUser) return;
     _supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false).then(function(res) {
         var badge = document.getElementById('notif-badge');
-        if (badge) {
-            if (res.count && res.count > 0) { badge.innerText = res.count; badge.classList.remove('hidden'); }
-            else { badge.classList.add('hidden'); }
-        }
+        if (badge) { if (res.count && res.count > 0) { badge.innerText = res.count; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); } }
     });
 }
-
 function showNotifications() {
     Swal.fire({ title: 'جاري التحميل...', didOpen: function() { Swal.showLoading(); } });
     _supabase.from('notifications').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).then(function(res) {
@@ -853,7 +735,6 @@ function showNotifications() {
         } else { Swal.fire('الإشعارات', 'لا يوجد إشعارات جديدة', 'info'); }
     });
 }
-
 function checkSession() {
     _supabase.auth.getSession().then(function(res) {
         if (res.data.session) {
@@ -872,14 +753,13 @@ function checkSession() {
     });
 }
 
-// ================= 11. التشغيل (DOMContentLoaded) =================
+// ================= 11. التشغيل =================
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== الجزء 1: الإعدادات الأساسية (لم يتغير) =====
     var savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     applyTranslations();
 
-    // ===== الجزء 2: إنشاء أزرار المتجر والسلة تلقائياً =====
+    // أزرار المتجر والسلة ومشترياتي
     var navMessages = document.getElementById('nav-messages');
     if (navMessages && !document.getElementById('nav-cards')) {
         var navCards = document.createElement('div');
@@ -895,43 +775,49 @@ document.addEventListener('DOMContentLoaded', function() {
         navCart.setAttribute('onclick', "navTo('cart')");
         navCart.innerHTML = '<i class="fa-solid fa-cart-shopping"></i><span>السلة</span><span id="cart-badge" class="hidden" style="position:absolute; top:-4px; right:0; background:var(--accent); color:white; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">0</span>';
 
+        var navPurchases = document.createElement('div');
+        navPurchases.className = 'nav-item';
+        navPurchases.id = 'nav-my-purchases';
+        navPurchases.setAttribute('onclick', "navTo('my-purchases')");
+        navPurchases.innerHTML = '<i class="fa-solid fa-receipt"></i><span>مشترياتي</span>';
+
         navMessages.parentNode.insertBefore(navCards, navMessages.nextSibling);
         navCards.parentNode.insertBefore(navCart, navCards.nextSibling);
+        navCart.parentNode.insertBefore(navPurchases, navCart.nextSibling);
     }
 
-    // ===== الجزء 3: إنشاء حاويات الصفحات تلقائياً =====
+    // صفحات المتجر والسلة ومشترياتي
     var pageMessages = document.getElementById('page-messages');
     if (pageMessages && !document.getElementById('page-cards')) {
         var pageCards = document.createElement('div');
         pageCards.id = 'page-cards';
         pageCards.className = 'page hidden';
-
         var pageCart = document.createElement('div');
         pageCart.id = 'page-cart';
         pageCart.className = 'page hidden';
-
+        var pagePurchases = document.createElement('div');
+        pagePurchases.id = 'page-my-purchases';
+        pagePurchases.className = 'page hidden';
         pageMessages.parentNode.insertBefore(pageCards, pageMessages.nextSibling);
         pageCards.parentNode.insertBefore(pageCart, pageCards.nextSibling);
+        pageCart.parentNode.insertBefore(pagePurchases, pageCart.nextSibling);
     }
 
-    // ===== الجزء 4: تحميل مكتبة الباركود =====
-    if (!window.JsBarcode) {
-        var jsb = document.createElement('script');
-        jsb.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
-        document.head.appendChild(jsb);
+    // تحميل مكتبة QR
+    if (!window.QRCode) {
+        var qrScript = document.createElement('script');
+        qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        document.head.appendChild(qrScript);
     }
 
-    // ===== الجزء 5: تحميل ملف cards.js =====
+    // تحميل cards.js
     if (typeof renderCardsPage !== 'function') {
         var cardsScript = document.createElement('script');
         cardsScript.src = 'cards.js';
-        cardsScript.onload = function() {
-            if (typeof updateCartBadge === 'function' && currentUser) updateCartBadge();
-        };
+        cardsScript.onload = function() { if (typeof updateCartBadge === 'function' && currentUser) updateCartBadge(); };
         document.head.appendChild(cardsScript);
     }
 
-    // ===== الجزء 6: الجلسة والأزرار (لم يتغير) =====
     checkSession();
 
     var btnLogin = document.getElementById('btn-do-login');
