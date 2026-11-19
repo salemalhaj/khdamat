@@ -10,6 +10,22 @@ var translations = {
 
 function t(key) { return translations[currentLang][key] || key; }
 
+// ================= دوال مساعدة للمتجر (أضيفت هنا بدون لمس شيء آخر) =================
+function escHtml(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+}
+function escJs(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/</g, '\\x3c');
+}
+function handleError(err) {
+    console.error('[app]', err);
+    if (Swal.isVisible()) Swal.close();
+    Swal.fire(t('error'), (err && err.message) ? err.message : t('error'), 'error');
+}
+// =====================================================================================
+
 function applyTranslations() {
     document.documentElement.lang = currentLang;
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
@@ -99,6 +115,9 @@ function setupUI() {
     }
     applyTranslations();
     if (typeof loadNotifications === 'function') loadNotifications();
+    
+    // السطر التالي أضيف لتحديث السلة عند الدخول
+    if (typeof updateCartBadge === 'function') updateCartBadge();
 }
 
 function doLogout() { _supabase.auth.signOut(); location.reload(); }
@@ -121,6 +140,10 @@ function navTo(page) {
     if (page === 'orders') renderOrders();
     if (page === 'messages') renderMessages();
     if (page === 'admin') renderAdmin();
+    
+    // السطرين التاليين أضيفا لربط المتجر والسلة
+    if (page === 'cards') renderCardsPage();
+    if (page === 'cart')  renderCart();
 }
 
 function showProfile() {
@@ -569,6 +592,9 @@ function renderAdmin() {
                         c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
                         c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>';
                         
+                        // إضافة تبويب المتجر
+                        c += '<div class="tab" onclick="adminTab(this, \'a-store\')">المتجر</div>';
+                        
                         c += '</div><div id="a-serv">';
                         if(psRes.data) for(var j=0; j<psRes.data.length; j++) { var s = psRes.data[j]; c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + s.title + '</strong> - ' + s.price + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + s.id + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + s.id + '\')">' + t('reject') + '</button></div></div>'; }
                         if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
@@ -587,6 +613,9 @@ function renderAdmin() {
                         c += '<div id="a-ads" class="hidden"></div>';
                         c += '<div id="a-settings" class="hidden"></div>';
                         
+                        // إضافة حاوية المتجر
+                        c += '<div id="a-store" class="hidden"></div>';
+                        
                         document.getElementById('page-admin').innerHTML = c;
                     });
                 });
@@ -599,7 +628,9 @@ function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users', 'a-ads', 'a-settings'];
+    
+    // إضافة a-store إلى القائمة
+    var contents = ['a-serv', 'a-with', 'a-trans', 'a-cards', 'a-users', 'a-ads', 'a-settings', 'a-store'];
     for (var j = 0; j < contents.length; j++) { var e = document.getElementById(contents[j]); if (e) e.classList.add('hidden'); }
     var active = document.getElementById(id); if (active) active.classList.remove('hidden');
     
@@ -607,6 +638,9 @@ function adminTab(el, id) {
     if (id === 'a-users') loadUsersList();
     if (id === 'a-ads') loadAdminAds();
     if (id === 'a-settings') loadAdminSettings();
+    
+    // إضافة تشغيل دالة المتجر
+    if (id === 'a-store') loadAdminStore();
 }
 
 function approveService(id) { _supabase.from('services').update({ status: 'approved' }).eq('id', id).then(function() { Swal.fire(t('success'), t('approved_msg'), 'success'); renderAdmin(); }); }
