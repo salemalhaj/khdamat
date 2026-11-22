@@ -1,10 +1,9 @@
 // ============================================================
-// cards.js v2 — كل الإصلاحات + الميزات الجديدة
+// cards.js — النسخة النهائية الشاملة (الإصدار الذهبي)
 // ============================================================
 var cardsState = { currentCategory: null, currentCompany: null, categories: [], orderQty: 1, currentProduct: null };
 var isCheckingOut = false;
 
-// ---------- المتجر للعميل ----------
 function renderCardsPage() {
   if (cardsState.currentCompany) return renderCardProducts();
   if (cardsState.currentCategory) return renderCardCompanies();
@@ -48,15 +47,8 @@ function renderCardProducts() {
     if (!res.data || !res.data.length) { document.getElementById('products-grid').innerHTML = '<p style="text-align:center;">لا توجد فئات</p>'; return; }
     var html = '';
     res.data.forEach(function(p) {
-      // ✅ لا نعرض العدد - فقط متوفر أو نفد
-      var stockBadge = '';
-      var canBuy = true;
-      if (p.fulfillment_type === 'auto_code') {
-        canBuy = (p.stock > 0);
-        stockBadge = canBuy ? '<span style="color:#27ae60; font-size:12px;"><i class="fa-solid fa-check-circle"></i> متوفر</span>' : '<span style="color:#e74c3c; font-size:12px;"><i class="fa-solid fa-times-circle"></i> نفد</span>';
-      } else {
-        stockBadge = '<span style="color:var(--accent); font-size:12px;"><i class="fa-solid fa-hand"></i> تسليم يدوي</span>';
-      }
+      var stockBadge = p.fulfillment_type === 'auto_code' ? (p.stock > 0 ? '<span style="color:#27ae60; font-size:12px;"><i class="fa-solid fa-check-circle"></i> متوفر</span>' : '<span style="color:#e74c3c; font-size:12px;"><i class="fa-solid fa-times-circle"></i> نفد</span>') : '<span style="color:var(--accent); font-size:12px;">تسليم يدوي</span>';
+      var canBuy = p.fulfillment_type === 'manual' || p.stock > 0;
       html += '<div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; ' + (!canBuy ? 'opacity:0.5;' : '') + '"><div style="display:flex; gap:10px; align-items:center;">' + (p.image_url ? '<img src="' + escHtml(p.image_url) + '" style="width:60px; height:40px; object-fit:cover; border-radius:6px;">' : '') + '<div><div style="font-weight:bold; font-size:16px;">' + escHtml(p.name) + '</div><div style="font-size:12px; color:var(--text-muted); margin-top:4px;">القيمة: ' + p.value + ' | السعر: <b style="color:var(--accent);">' + p.price + ' ' + t('currency') + '</b></div><div style="margin-top:6px;">' + stockBadge + '</div></div></div>' + (canBuy ? '<button class="btn btn-primary" style="margin:0; padding:10px 20px;" onclick="openQuantityModal(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">اختيار</button>' : '<button class="btn" style="margin:0; background:#ccc; color:#666; cursor:not-allowed; padding:10px 20px;" disabled>نفد</button>') + '</div>';
     });
     document.getElementById('products-grid').innerHTML = html;
@@ -77,19 +69,10 @@ function openQuantityModal(product) {
 }
 
 function changeQty(delta) {
-  var maxQty = window._maxQty || 99;
-  var newQty = cardsState.orderQty + delta;
+  var maxQty = window._maxQty || 99; var newQty = cardsState.orderQty + delta;
   if (delta < 0 && newQty < 1) return;
-  if (delta > 0 && newQty > maxQty) { 
-    var warn = document.getElementById('stock-warning');
-    warn.innerText = 'الكمية المتاحة: ' + maxQty;
-    warn.style.display = 'block'; 
-    return; 
-  }
-  cardsState.orderQty = newQty;
-  document.getElementById('qty-display').innerText = newQty;
-  document.getElementById('stock-warning').style.display = 'none';
-  document.getElementById('total-display').innerText = 'الإجمالي: ' + (newQty * window._unitPrice).toFixed(2) + ' ' + t('currency');
+  if (delta > 0 && newQty > maxQty) { var warn = document.getElementById('stock-warning'); warn.innerText = 'الكمية المتاحة: ' + maxQty; warn.style.display = 'block'; return; }
+  cardsState.orderQty = newQty; document.getElementById('qty-display').innerText = newQty; document.getElementById('stock-warning').style.display = 'none'; document.getElementById('total-display').innerText = 'الإجمالي: ' + (newQty * window._unitPrice).toFixed(2) + ' ' + t('currency');
 }
 
 function addToCart(productId, quantity) {
@@ -136,7 +119,6 @@ function removeCartItem(itemId) {
   _supabase.from('cart_items').delete().eq('id', itemId).then(function() { renderCart(); updateCartBadge(); }).catch(handleError);
 }
 
-// ---------- الشراء والفاتورة ----------
 function checkoutCart() {
   if (isCheckingOut) return;
   Swal.fire({ title: 'تأكيد الشراء؟', text: 'سيتم خصم المبلغ من محفظتك وتحويله للمدير.', icon: 'question', showCancelButton: true, confirmButtonText: 'نعم، اشترِ الآن', cancelButtonText: t('cancel') }).then(function(r) {
@@ -150,7 +132,6 @@ function checkoutCart() {
       var itemsHtml = '';
       var cardIndex = 0;
       items.forEach(function(item) {
-        // ✅ حماية: نعرض فقط بعدد الكمية
         var codesToShow = (item.codes || []).slice(0, item.quantity);
         if (codesToShow.length > 0) {
           codesToShow.forEach(function(code) {
@@ -161,42 +142,33 @@ function checkoutCart() {
                 '<div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">' + escHtml(item.company_name) + '</div>' +
                 '<div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">' + escHtml(item.product_name) + '</div>' +
                 '<div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 15px;">' +
-                  // الرقم التسلسلي مع زر نسخ
                   '<div style="text-align: right; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">' +
                     '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-                      '<div>' +
-                        '<div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">الرقم التسلسلي</div>' +
-                        '<div style="font-size: 16px; font-weight: bold; font-family: \'Courier New\', monospace; direction: ltr; letter-spacing: 1px;">' + escHtml(code.serial || '---') + '</div>' +
-                      '</div>' +
-                      '<button onclick="copySingle(\'' + escJs(code.serial || '') + '\')" style="background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px;"><i class="fa-solid fa-copy"></i></button>' +
+                      '<div><div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">الرقم التسلسلي</div>' +
+                      '<div style="font-size: 16px; font-weight: bold; font-family: \'Courier New\', monospace; direction: ltr; letter-spacing: 1px;">' + escHtml(code.serial || '---') + '</div></div>' +
+                      '<button onclick="copySingle(\'' + escJs(code.serial || '') + '\', this)" style="background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px;"><i class="fa-solid fa-copy"></i></button>' +
                     '</div>' +
                   '</div>' +
-                  // الرقم السري مع زر نسخ
                   '<div style="text-align: right; margin-bottom: 12px;">' +
                     '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-                      '<div>' +
-                        '<div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">الرقم السري</div>' +
-                        '<div style="font-size: 16px; font-weight: bold; font-family: \'Courier New\', monospace; direction: ltr; letter-spacing: 2px;">' + escHtml(code.pin || '---') + '</div>' +
-                      '</div>' +
-                      '<button onclick="copySingle(\'' + escJs(code.pin || '') + '\')" style="background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px;"><i class="fa-solid fa-copy"></i></button>' +
+                      '<div><div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">الرقم السري</div>' +
+                      '<div style="font-size: 16px; font-weight: bold; font-family: \'Courier New\', monospace; direction: ltr; letter-spacing: 2px;">' + escHtml(code.pin || '---') + '</div></div>' +
+                      '<button onclick="copySingle(\'' + escJs(code.pin || '') + '\', this)" style="background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px;"><i class="fa-solid fa-copy"></i></button>' +
                     '</div>' +
                   '</div>' +
-                  // QR code للرقم السري
-                  '<div style="background: white; border-radius: 8px; padding: 10px; margin-top: 10px; display: inline-block;"><div id="' + qrId + '"></div></div>' +
+                  '<div style="background: white; border-radius: 8px; padding: 10px; margin-top: 10px; display: inline-block;"><div id="' + qrId + '"><div style="color:#666; font-size:10px;">جاري تكوين QR...</div></div></div>' +
                 '</div>' +
               '</div>';
             setTimeout(function() {
               if (typeof QRCode !== 'undefined' && code.pin) {
-                try {
-                  QRCode.toString(code.pin, { type: 'svg', width: 130, margin: 1, color: { dark: '#000000', light: '#ffffff' } }, function(err, svg) {
-                    if (!err) {
-                      var el = document.getElementById(qrId);
-                      if (el) el.innerHTML = svg;
-                    }
-                  });
-                } catch (e) { console.warn('QR render', e); }
+                QRCode.toDataURL(code.pin, { width: 130, margin: 1 }, function(err, url) {
+                  if (!err) {
+                    var el = document.getElementById(qrId);
+                    if (el) el.innerHTML = '<img src="' + url + '" style="width:130px; height:130px;">';
+                  }
+                });
               }
-            }, 200);
+            }, 300);
           });
         } else {
           itemsHtml += '<div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 16px; padding: 20px; margin-bottom: 15px; text-align: center;"><i class="fa-solid fa-clock" style="font-size: 36px; color: #f59e0b; margin-bottom: 10px; display: block;"></i><div style="font-weight: bold; color: #92400e; margin-bottom: 5px; font-size: 15px;">' + escHtml(item.product_name) + '</div><div style="font-size: 12px; color: #78350f;">سيتم التسليم يدوياً من قبل الإدارة</div></div>';
@@ -212,14 +184,14 @@ function checkoutCart() {
   });
 }
 
-// ✅ نسخ نص واحد (للاستخدام مع الأزرار الصغيرة)
-function copySingle(text) {
+function copySingle(text, btn) {
   if (!text || text === '---') return;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(function() {
-      Swal.fire({ title: 'تم النسخ ✓', icon: 'success', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
-    }).catch(function() {
-      Swal.fire('البيانات', '<pre style="text-align:left; direction:ltr;">' + escHtml(text) + '</pre>', 'info');
+      var original = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+      btn.style.background = '#27ae60';
+      setTimeout(function() { btn.innerHTML = original; btn.style.background = 'rgba(255,255,255,0.25)'; }, 1500);
     });
   }
 }
@@ -229,8 +201,9 @@ function renderMyPurchases() {
   var container = document.getElementById('page-my-purchases');
   if (!container) return;
   container.innerHTML = '<h2 style="color:var(--primary); margin-bottom:15px;"><i class="fa-solid fa-receipt"></i> مشترياتي</h2><div id="purchases-body"><p>' + t('loading') + '</p></div>';
+  
   _supabase.from('card_orders')
-    .select('*, card_order_items(*)')
+    .select('*, card_order_items(*), digital_codes(*)')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false })
     .then(function(res) {
@@ -246,6 +219,37 @@ function renderMyPurchases() {
         var itemsHtml = (order.card_order_items || []).map(function(i) {
           return '<li style="margin-bottom:5px;">' + escHtml(i.product_name) + ' × ' + i.quantity + ' = ' + i.subtotal + ' ' + t('currency') + '</li>';
         }).join('');
+        
+        var codesHtml = '';
+        if (order.digital_codes && order.digital_codes.length > 0) {
+          codesHtml = '<div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><strong style="font-size:12px; color:var(--primary);">الأكواد:</strong>';
+          order.digital_codes.forEach(function(c, i) {
+            var pinId = 'pin-' + order.id + '-' + i;
+            var serId = 'ser-' + order.id + '-' + i;
+            codesHtml += `
+              <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-top:8px; border:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                  <span style="font-size:12px; color:#666;">رقم تسلسلي:</span>
+                  <div>
+                    <span id="${serId}" style="font-family:monospace; font-weight:bold; direction:ltr;">••••••••</span>
+                    <button onclick="toggleVisibility('${serId}', '${escJs(c.serial_number)}')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-eye"></i></button>
+                    <button onclick="copySingle('${escJs(c.serial_number)}', this)" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-copy"></i></button>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="font-size:12px; color:#666;">رقم سري:</span>
+                  <div>
+                    <span id="${pinId}" style="font-family:monospace; font-weight:bold; direction:ltr;">••••••••</span>
+                    <button onclick="toggleVisibility('${pinId}', '${escJs(c.pin_code)}')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-eye"></i></button>
+                    <button onclick="copySingle('${escJs(c.pin_code)}', this)" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-copy"></i></button>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          codesHtml += '</div>';
+        }
+        
         html += '<div class="card" style="padding:15px; margin-bottom:12px;">' +
                 '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">' +
                   '<div><div style="font-size:11px; color:var(--text-muted);">طلب #' + String(order.id).substring(0, 8) + '</div>' +
@@ -255,10 +259,18 @@ function renderMyPurchases() {
                   '<div style="font-size:11px; color:#27ae60;">' + (order.status === 'completed' ? '✓ مكتمل' : order.status) + '</div></div>' +
                 '</div>' +
                 '<ul style="margin:0; padding-right:20px; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' +
+                codesHtml +
                 '</div>';
       });
       document.getElementById('purchases-body').innerHTML = html;
     }).catch(handleError);
+}
+
+function toggleVisibility(id, actualValue) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (el.innerText.includes('•')) { el.innerText = actualValue || '---'; }
+  else { el.innerText = '••••••••'; }
 }
 
 // ---------- لوحة إدارة المتجر ----------
@@ -293,7 +305,6 @@ function storeTab(el, id) {
   if (id === 'st-orders') loadAdminStoreOrders();
 }
 
-// --- الفئات الرئيسية ---
 function loadAdminStoreCats() {
   var box = document.getElementById('st-cats');
   box.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h4 style="margin:0;">الفئات الرئيسية</h4><button class="btn btn-primary" style="margin:0; padding:8px 15px;" onclick="addMainCategoryForm()"><i class="fa-solid fa-plus"></i> إضافة فئة</button></div><div id="admin-cats-list"><p>جاري التحميل...</p></div>';
@@ -301,34 +312,15 @@ function loadAdminStoreCats() {
     var html = '';
     if (res.data && res.data.length > 0) {
       res.data.forEach(function(c) {
-        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
-                '<div style="display:flex; align-items:center; gap:10px;">' +
-                  '<i class="fa-solid ' + escHtml(c.icon || 'fa-tag') + '" style="font-size:24px; color:var(--primary);"></i>' +
-                  '<div><strong>' + escHtml(currentLang === 'ar' ? c.name_ar : c.name_en) + '</strong><br><small style="color:var(--text-muted);">ترتيب: ' + (c.display_order || 0) + '</small></div>' +
-                '</div>' +
-                '<div style="display:flex; gap:5px;">' +
-                  '<button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editMainCategoryForm(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-pen"></i></button>' +
-                  '<button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteMainCategory(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-trash"></i></button>' +
-                '</div></div>';
+        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;"><i class="fa-solid ' + escHtml(c.icon || 'fa-tag') + '" style="font-size:24px; color:var(--primary);"></i><div><strong>' + escHtml(currentLang === 'ar' ? c.name_ar : c.name_en) + '</strong><br><small style="color:var(--text-muted);">ترتيب: ' + (c.display_order || 0) + '</small></div></div><div style="display:flex; gap:5px;"><button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editMainCategoryForm(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteMainCategory(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-trash"></i></button></div></div>';
       });
-    } else {
-      html = '<p style="text-align:center;">لا توجد فئات.</p>';
-    }
+    } else { html = '<p style="text-align:center;">لا توجد فئات.</p>'; }
     document.getElementById('admin-cats-list').innerHTML = html;
   }).catch(handleError);
 }
 
 function addMainCategoryForm() {
-  Swal.fire({
-    title: 'إضافة فئة رئيسية',
-    html: '<input id="cat-name-ar" class="swal2-input" placeholder="الاسم بالعربية"><input id="cat-name-en" class="swal2-input" placeholder="الاسم بالإنجليزية"><input id="cat-icon" class="swal2-input" placeholder="أيقونة (مثال: fa-credit-card)" value="fa-tag"><input id="cat-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0">',
-    confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-    preConfirm: function() {
-      var nameAr = document.getElementById('cat-name-ar').value.trim();
-      if (!nameAr) { Swal.showValidationMessage('الاسم بالعربية مطلوب'); return false; }
-      return { name_ar: nameAr, name_en: document.getElementById('cat-name-en').value.trim() || nameAr, icon: document.getElementById('cat-icon').value.trim() || 'fa-tag', display_order: parseInt(document.getElementById('cat-order').value) || 0 };
-    }
-  }).then(function(r) {
+  Swal.fire({ title: 'إضافة فئة رئيسية', html: '<input id="cat-name-ar" class="swal2-input" placeholder="الاسم بالعربية"><input id="cat-name-en" class="swal2-input" placeholder="الاسم بالإنجليزية"><input id="cat-icon" class="swal2-input" placeholder="أيقونة (مثال: fa-credit-card)" value="fa-tag"><input id="cat-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var nameAr = document.getElementById('cat-name-ar').value.trim(); if (!nameAr) { Swal.showValidationMessage('الاسم بالعربية مطلوب'); return false; } return { name_ar: nameAr, name_en: document.getElementById('cat-name-en').value.trim() || nameAr, icon: document.getElementById('cat-icon').value.trim() || 'fa-tag', display_order: parseInt(document.getElementById('cat-order').value) || 0 }; } }).then(function(r) {
     if (!r.isConfirmed) return;
     Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
     var data = Object.assign({ id: 'cat_' + Date.now() }, r.value);
@@ -340,16 +332,7 @@ function editMainCategoryForm(id) {
   _supabase.from('card_categories').select('*').eq('id', id).maybeSingle().then(function(res) {
     if (!res.data) return;
     var c = res.data;
-    Swal.fire({
-      title: 'تعديل الفئة',
-      html: '<input id="cat-name-ar" class="swal2-input" placeholder="الاسم بالعربية" value="' + escHtml(c.name_ar) + '"><input id="cat-name-en" class="swal2-input" placeholder="الاسم بالإنجليزية" value="' + escHtml(c.name_en) + '"><input id="cat-icon" class="swal2-input" placeholder="أيقونة" value="' + escHtml(c.icon) + '"><input id="cat-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="' + (c.display_order || 0) + '">',
-      confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-      preConfirm: function() {
-        var nameAr = document.getElementById('cat-name-ar').value.trim();
-        if (!nameAr) { Swal.showValidationMessage('الاسم مطلوب'); return false; }
-        return { name_ar: nameAr, name_en: document.getElementById('cat-name-en').value.trim() || nameAr, icon: document.getElementById('cat-icon').value.trim() || 'fa-tag', display_order: parseInt(document.getElementById('cat-order').value) || 0 };
-      }
-    }).then(function(r) {
+    Swal.fire({ title: 'تعديل الفئة', html: '<input id="cat-name-ar" class="swal2-input" placeholder="الاسم بالعربية" value="' + escHtml(c.name_ar) + '"><input id="cat-name-en" class="swal2-input" placeholder="الاسم بالإنجليزية" value="' + escHtml(c.name_en) + '"><input id="cat-icon" class="swal2-input" placeholder="أيقونة" value="' + escHtml(c.icon) + '"><input id="cat-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="' + (c.display_order || 0) + '">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var nameAr = document.getElementById('cat-name-ar').value.trim(); if (!nameAr) { Swal.showValidationMessage('الاسم مطلوب'); return false; } return { name_ar: nameAr, name_en: document.getElementById('cat-name-en').value.trim() || nameAr, icon: document.getElementById('cat-icon').value.trim() || 'fa-tag', display_order: parseInt(document.getElementById('cat-order').value) || 0 }; } }).then(function(r) {
       if (!r.isConfirmed) return;
       _supabase.from('card_categories').update(r.value).eq('id', id).then(function() { Swal.fire(t('success'), 'تم التعديل', 'success'); loadAdminStoreCats(); }).catch(handleError);
     });
@@ -363,7 +346,6 @@ function deleteMainCategory(id) {
   });
 }
 
-// --- الشركات ---
 function loadAdminStoreCompanies() {
   var box = document.getElementById('st-companies');
   box.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h4 style="margin:0;">الشركات</h4><button class="btn btn-primary" style="margin:0; padding:8px 15px;" onclick="addCompanyForm()"><i class="fa-solid fa-plus"></i> إضافة شركة</button></div><div id="admin-companies-list"><p>جاري التحميل...</p></div>';
@@ -371,15 +353,7 @@ function loadAdminStoreCompanies() {
     var html = '';
     if (res.data && res.data.length > 0) {
       res.data.forEach(function(c) {
-        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
-                '<div style="display:flex; align-items:center; gap:10px;">' +
-                  (c.logo_url ? '<img src="' + escHtml(c.logo_url) + '" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">' : '<div style="width:40px; height:40px; background:var(--primary); border-radius:8px; color:white; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-building"></i></div>') +
-                  '<div><strong>' + escHtml(c.name) + '</strong><br><small style="color:var(--text-muted);">' + (c.card_categories ? escHtml(c.card_categories.name_ar) : 'بدون فئة') + ' | ترتيب: ' + (c.display_order || 0) + '</small></div>' +
-                '</div>' +
-                '<div style="display:flex; gap:5px;">' +
-                  '<button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editCompanyForm(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-pen"></i></button>' +
-                  '<button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteCompany(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-trash"></i></button>' +
-                '</div></div>';
+        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;">' + (c.logo_url ? '<img src="' + escHtml(c.logo_url) + '" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">' : '<div style="width:40px; height:40px; background:var(--primary); border-radius:8px; color:white; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-building"></i></div>') + '<div><strong>' + escHtml(c.name) + '</strong><br><small style="color:var(--text-muted);">' + (c.card_categories ? escHtml(c.card_categories.name_ar) : 'بدون فئة') + ' | ترتيب: ' + (c.display_order || 0) + '</small></div></div><div style="display:flex; gap:5px;"><button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editCompanyForm(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteCompany(\'' + escJs(c.id) + '\')"><i class="fa-solid fa-trash"></i></button></div></div>';
       });
     } else { html = '<p style="text-align:center;">لا توجد شركات.</p>'; }
     document.getElementById('admin-companies-list').innerHTML = html;
@@ -391,16 +365,7 @@ function addCompanyForm() {
     var catOpts = '';
     if (catsRes.data) catsRes.data.forEach(function(c) { catOpts += '<option value="' + escHtml(c.id) + '">' + escHtml(c.name_ar) + '</option>'; });
     if (!catOpts) return Swal.fire('تنبيه', 'أضف فئة رئيسية أولاً', 'warning');
-    Swal.fire({
-      title: 'إضافة شركة',
-      html: '<input id="c-name" class="swal2-input" placeholder="اسم الشركة"><select id="c-cat" class="swal2-input">' + catOpts + '</select><input id="c-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">شعار الشركة:</label><input id="c-logo-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">',
-      confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-      preConfirm: function() {
-        var name = document.getElementById('c-name').value.trim();
-        if (!name) { Swal.showValidationMessage('اسم الشركة مطلوب'); return false; }
-        return { name: name, category_id: document.getElementById('c-cat').value, display_order: parseInt(document.getElementById('c-order').value) || 0, file: document.getElementById('c-logo-file').files[0] };
-      }
-    }).then(function(r) {
+    Swal.fire({ title: 'إضافة شركة', html: '<input id="c-name" class="swal2-input" placeholder="اسم الشركة"><select id="c-cat" class="swal2-input">' + catOpts + '</select><input id="c-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">شعار الشركة:</label><input id="c-logo-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var name = document.getElementById('c-name').value.trim(); if (!name) { Swal.showValidationMessage('اسم الشركة مطلوب'); return false; } return { name: name, category_id: document.getElementById('c-cat').value, display_order: parseInt(document.getElementById('c-order').value) || 0, file: document.getElementById('c-logo-file').files[0] }; } }).then(function(r) {
       if (!r.isConfirmed) return;
       Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
       uploadStoreFile(r.value.file, 'company_logos').then(function(url) {
@@ -419,16 +384,7 @@ function editCompanyForm(id) {
     _supabase.from('card_categories').select('id, name_ar').then(function(catsRes) {
       var catOpts = '';
       if (catsRes.data) catsRes.data.forEach(function(cat) { catOpts += '<option value="' + escHtml(cat.id) + '" ' + (cat.id === c.category_id ? 'selected' : '') + '>' + escHtml(cat.name_ar) + '</option>'; });
-      Swal.fire({
-        title: 'تعديل شركة',
-        html: '<input id="c-name" class="swal2-input" placeholder="اسم الشركة" value="' + escHtml(c.name) + '"><select id="c-cat" class="swal2-input">' + catOpts + '</select><input id="c-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="' + (c.display_order || 0) + '"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">تغيير الشعار:</label><input id="c-logo-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">',
-        confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-        preConfirm: function() {
-          var name = document.getElementById('c-name').value.trim();
-          if (!name) { Swal.showValidationMessage('اسم الشركة مطلوب'); return false; }
-          return { name: name, category_id: document.getElementById('c-cat').value, display_order: parseInt(document.getElementById('c-order').value) || 0, file: document.getElementById('c-logo-file').files[0] };
-        }
-      }).then(function(r) {
+      Swal.fire({ title: 'تعديل شركة', html: '<input id="c-name" class="swal2-input" placeholder="اسم الشركة" value="' + escHtml(c.name) + '"><select id="c-cat" class="swal2-input">' + catOpts + '</select><input id="c-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="' + (c.display_order || 0) + '"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">تغيير الشعار:</label><input id="c-logo-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var name = document.getElementById('c-name').value.trim(); if (!name) { Swal.showValidationMessage('اسم الشركة مطلوب'); return false; } return { name: name, category_id: document.getElementById('c-cat').value, display_order: parseInt(document.getElementById('c-order').value) || 0, file: document.getElementById('c-logo-file').files[0] }; } }).then(function(r) {
         if (!r.isConfirmed) return;
         Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
         uploadStoreFile(r.value.file, 'company_logos').then(function(url) {
@@ -443,7 +399,6 @@ function editCompanyForm(id) {
 
 function deleteCompany(id) { Swal.fire({ title: 'حذف الشركة وكل بطاقاتها؟', icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم احذف', cancelButtonText: t('cancel') }).then(function(r) { if (r.isConfirmed) { _supabase.from('companies').delete().eq('id', id).then(function() { Swal.fire(t('success'), 'تم الحذف', 'success'); loadAdminStoreCompanies(); }).catch(handleError); } }); }
 
-// --- البطاقات ---
 function loadAdminStoreProducts() {
   var box = document.getElementById('st-products');
   box.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h4 style="margin:0;">البطاقات</h4><button class="btn btn-primary" style="margin:0; padding:8px 15px;" onclick="addProductForm()"><i class="fa-solid fa-plus"></i> إضافة بطاقة</button></div><div id="admin-products-list"><p>جاري التحميل...</p></div>';
@@ -451,16 +406,7 @@ function loadAdminStoreProducts() {
     var html = '';
     if (res.data && res.data.length > 0) {
       res.data.forEach(function(p) {
-        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
-                '<div style="display:flex; align-items:center; gap:10px;">' +
-                  (p.image_url ? '<img src="' + escHtml(p.image_url) + '" style="width:50px; height:30px; object-fit:cover; border-radius:4px;">' : '') +
-                  '<div><strong>' + escHtml(p.name) + '</strong><br><small style="color:var(--text-muted);">' + (p.companies ? escHtml(p.companies.name) : '') + ' - السعر: ' + p.price + ' - مخزون: ' + (p.stock || 0) + '</small></div>' +
-                '</div>' +
-                '<div style="display:flex; gap:5px;">' +
-                  '<button class="btn btn-sm" style="margin:0; background:var(--primary); color:white;" onclick="addCodesForm(\'' + escJs(p.id) + '\')" title="إضافة أكواد"><i class="fa-solid fa-key"></i></button>' +
-                  '<button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editProductForm(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-pen"></i></button>' +
-                  '<button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteProduct(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-trash"></i></button>' +
-                '</div></div>';
+        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;">' + (p.image_url ? '<img src="' + escHtml(p.image_url) + '" style="width:50px; height:30px; object-fit:cover; border-radius:4px;">' : '') + '<div><strong>' + escHtml(p.name) + '</strong><br><small style="color:var(--text-muted);">' + (p.companies ? escHtml(p.companies.name) : '') + ' - السعر: ' + p.price + ' - مخزون: ' + (p.stock || 0) + '</small></div></div><div style="display:flex; gap:5px;"><button class="btn btn-sm" style="margin:0; background:var(--primary); color:white;" onclick="addCodesForm(\'' + escJs(p.id) + '\')" title="إضافة أكواد"><i class="fa-solid fa-key"></i></button><button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editProductForm(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteProduct(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-trash"></i></button></div></div>';
       });
     } else { html = '<p style="text-align:center;">لا توجد بطاقات.</p>'; }
     document.getElementById('admin-products-list').innerHTML = html;
@@ -472,17 +418,7 @@ function addProductForm() {
     var compOpts = '';
     if (compRes.data) compRes.data.forEach(function(c) { compOpts += '<option value="' + escHtml(c.id) + '">' + escHtml(c.name) + '</option>'; });
     if (!compOpts) return Swal.fire('تنبيه', 'أضف شركة أولاً', 'warning');
-    Swal.fire({
-      title: 'إضافة بطاقة',
-      html: '<select id="p-company" class="swal2-input">' + compOpts + '</select><input id="p-name" class="swal2-input" placeholder="اسم البطاقة"><input id="p-value" class="swal2-input" type="number" placeholder="القيمة الاسمية"><input id="p-price" class="swal2-input" type="number" placeholder="سعر البيع"><select id="p-fulfill" class="swal2-input"><option value="auto_code">تسليم آلي (أكواد)</option><option value="manual">تسليم يدوي</option></select><input id="p-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">صورة البطاقة:</label><input id="p-img-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">',
-      confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-      preConfirm: function() {
-        var name = document.getElementById('p-name').value.trim();
-        var price = parseFloat(document.getElementById('p-price').value);
-        if (!name || !price) { Swal.showValidationMessage('الاسم والسعر مطلوبان'); return false; }
-        return { company_id: document.getElementById('p-company').value, name: name, value: parseFloat(document.getElementById('p-value').value) || price, price: price, fulfillment_type: document.getElementById('p-fulfill').value, display_order: parseInt(document.getElementById('p-order').value) || 0, file: document.getElementById('p-img-file').files[0] };
-      }
-    }).then(function(r) {
+    Swal.fire({ title: 'إضافة بطاقة', html: '<select id="p-company" class="swal2-input">' + compOpts + '</select><input id="p-name" class="swal2-input" placeholder="اسم البطاقة"><input id="p-value" class="swal2-input" type="number" placeholder="القيمة الاسمية"><input id="p-price" class="swal2-input" type="number" placeholder="سعر البيع"><select id="p-fulfill" class="swal2-input"><option value="auto_code">تسليم آلي (أكواد)</option><option value="manual">تسليم يدوي</option></select><input id="p-order" class="swal2-input" type="number" placeholder="ترتيب العرض" value="0"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">صورة البطاقة:</label><input id="p-img-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var name = document.getElementById('p-name').value.trim(); var price = parseFloat(document.getElementById('p-price').value); if (!name || !price) { Swal.showValidationMessage('الاسم والسعر مطلوبان'); return false; } return { company_id: document.getElementById('p-company').value, name: name, value: parseFloat(document.getElementById('p-value').value) || price, price: price, fulfillment_type: document.getElementById('p-fulfill').value, display_order: parseInt(document.getElementById('p-order').value) || 0, file: document.getElementById('p-img-file').files[0] }; } }).then(function(r) {
       if (!r.isConfirmed) return;
       Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
       uploadStoreFile(r.value.file, 'card_images').then(function(url) {
@@ -501,17 +437,7 @@ function editProductForm(id) {
     _supabase.from('companies').select('id, name').then(function(compRes) {
       var compOpts = '';
       if (compRes.data) compRes.data.forEach(function(c) { compOpts += '<option value="' + escHtml(c.id) + '" ' + (c.id === p.company_id ? 'selected' : '') + '>' + escHtml(c.name) + '</option>'; });
-      Swal.fire({
-        title: 'تعديل البطاقة',
-        html: '<select id="p-company" class="swal2-input">' + compOpts + '</select><input id="p-name" class="swal2-input" placeholder="اسم البطاقة" value="' + escHtml(p.name) + '"><input id="p-value" class="swal2-input" type="number" placeholder="القيمة" value="' + p.value + '"><input id="p-price" class="swal2-input" type="number" placeholder="السعر" value="' + p.price + '"><select id="p-fulfill" class="swal2-input"><option value="auto_code" ' + (p.fulfillment_type === 'auto_code' ? 'selected' : '') + '>آلي</option><option value="manual" ' + (p.fulfillment_type === 'manual' ? 'selected' : '') + '>يدوي</option></select><input id="p-order" class="swal2-input" type="number" placeholder="ترتيب" value="' + (p.display_order || 0) + '"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">تغيير الصورة:</label><input id="p-img-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">',
-        confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'),
-        preConfirm: function() {
-          var name = document.getElementById('p-name').value.trim();
-          var price = parseFloat(document.getElementById('p-price').value);
-          if (!name || !price) { Swal.showValidationMessage('الاسم والسعر مطلوبان'); return false; }
-          return { company_id: document.getElementById('p-company').value, name: name, value: parseFloat(document.getElementById('p-value').value) || price, price: price, fulfillment_type: document.getElementById('p-fulfill').value, display_order: parseInt(document.getElementById('p-order').value) || 0, file: document.getElementById('p-img-file').files[0] };
-        }
-      }).then(function(r) {
+      Swal.fire({ title: 'تعديل البطاقة', html: '<select id="p-company" class="swal2-input">' + compOpts + '</select><input id="p-name" class="swal2-input" placeholder="اسم البطاقة" value="' + escHtml(p.name) + '"><input id="p-value" class="swal2-input" type="number" placeholder="القيمة" value="' + p.value + '"><input id="p-price" class="swal2-input" type="number" placeholder="السعر" value="' + p.price + '"><select id="p-fulfill" class="swal2-input"><option value="auto_code" ' + (p.fulfillment_type === 'auto_code' ? 'selected' : '') + '>آلي</option><option value="manual" ' + (p.fulfillment_type === 'manual' ? 'selected' : '') + '>يدوي</option></select><input id="p-order" class="swal2-input" type="number" placeholder="ترتيب" value="' + (p.display_order || 0) + '"><label style="display:block; text-align:right; font-size:12px; margin-bottom:5px;">تغيير الصورة:</label><input id="p-img-file" type="file" accept="image/*" style="width:100%; margin-bottom:10px;">', confirmButtonText: 'حفظ', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var name = document.getElementById('p-name').value.trim(); var price = parseFloat(document.getElementById('p-price').value); if (!name || !price) { Swal.showValidationMessage('الاسم والسعر مطلوبان'); return false; } return { company_id: document.getElementById('p-company').value, name: name, value: parseFloat(document.getElementById('p-value').value) || price, price: price, fulfillment_type: document.getElementById('p-fulfill').value, display_order: parseInt(document.getElementById('p-order').value) || 0, file: document.getElementById('p-img-file').files[0] }; } }).then(function(r) {
         if (!r.isConfirmed) return;
         Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
         uploadStoreFile(r.value.file, 'card_images').then(function(url) {
@@ -526,12 +452,11 @@ function editProductForm(id) {
 
 function deleteProduct(id) { Swal.fire({ title: 'حذف البطاقة؟', icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم احذف', cancelButtonText: t('cancel') }).then(function(r) { if (r.isConfirmed) { _supabase.from('card_products').delete().eq('id', id).then(function() { Swal.fire(t('success'), 'تم الحذف', 'success'); loadAdminStoreProducts(); }).catch(handleError); } }); }
 
-// --- طلبات المتجر (مع التفاصيل الكاملة) ---
 function loadAdminStoreOrders() {
   var box = document.getElementById('st-orders');
   box.innerHTML = '<p>' + t('loading') + '</p>';
   _supabase.from('card_orders')
-    .select('*, profiles(full_name, phone, email), card_order_items(*)')
+    .select('*, profiles(full_name, phone, email), card_order_items(*), digital_codes(*)')
     .order('created_at', { ascending: false }).limit(100)
     .then(function(res) {
       if (!res.data || !res.data.length) { box.innerHTML = '<p style="text-align:center;">لا توجد طلبات بعد.</p>'; return; }
@@ -542,26 +467,21 @@ function loadAdminStoreOrders() {
         var itemsHtml = (o.card_order_items || []).map(function(i) {
           return '<li style="margin-bottom:5px; padding:8px; background:#f9f9f9; border-radius:6px;"><strong>' + escHtml(i.product_name) + '</strong> × ' + i.quantity + ' = ' + i.subtotal + ' ' + t('currency') + '</li>';
         }).join('');
+        
+        var codesHtml = '';
+        if (o.digital_codes && o.digital_codes.length > 0) {
+          codesHtml = '<div style="margin-top:10px; padding:10px; background:#f0f8ff; border-radius:8px; border:1px solid #bce;"><strong style="font-size:12px; color:var(--primary);">الأكواد المباعة:</strong><ul style="margin:5px 0 0 0; padding-right:15px; font-size:12px; direction:ltr; text-align:left;">';
+          o.digital_codes.forEach(function(c) { codesHtml += '<li>Serial: <b>' + escHtml(c.serial_number) + '</b> | PIN: <b>' + escHtml(c.pin_code) + '</b></li>'; });
+          codesHtml += '</ul></div>';
+        }
+        
         var cust = o.profiles || {};
-        html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid var(--primary);">' +
-                '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">' +
-                  '<div style="flex:1;">' +
-                    '<div style="font-size:11px; color:var(--text-muted);">#' + String(o.id).substring(0, 8) + '</div>' +
-                    '<div style="font-weight:bold; color:var(--primary); margin:4px 0;"><i class="fa-solid fa-user"></i> ' + escHtml(cust.full_name || 'غير معروف') + '</div>' +
-                    '<div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-phone"></i> ' + escHtml(cust.phone || '-') + '</div>' +
-                    '<div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ' + escHtml(cust.email || '-') + '</div>' +
-                    '<div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="fa-regular fa-calendar"></i> ' + dateStr + '</div>' +
-                  '</div>' +
-                  '<div style="text-align:left;"><div style="font-size:22px; font-weight:bold; color:var(--accent);">' + o.total_amount + '</div><div style="font-size:11px; color:var(--text-muted);">' + t('currency') + '</div></div>' +
-                '</div>' +
-                '<ul style="margin:0; padding-right:0; list-style:none; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' +
-                '</div>';
+        html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;"><div style="flex:1;"><div style="font-size:11px; color:var(--text-muted);">#' + String(o.id).substring(0, 8) + '</div><div style="font-weight:bold; color:var(--primary); margin:4px 0;"><i class="fa-solid fa-user"></i> ' + escHtml(cust.full_name || 'غير معروف') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-phone"></i> ' + escHtml(cust.phone || '-') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ' + escHtml(cust.email || '-') + '</div><div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="fa-regular fa-calendar"></i> ' + dateStr + '</div></div><div style="text-align:left;"><div style="font-size:22px; font-weight:bold; color:var(--accent);">' + o.total_amount + '</div><div style="font-size:11px; color:var(--text-muted);">' + t('currency') + '</div></div></div><ul style="margin:0; padding-right:0; list-style:none; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' + codesHtml + '</div>';
       });
       box.innerHTML = html;
     }).catch(handleError);
 }
 
-// --- الأكواد والملفات ---
 function uploadStoreFile(file, folder) {
   return new Promise(function(resolve, reject) {
     if (!file) return resolve('');
@@ -571,28 +491,10 @@ function uploadStoreFile(file, folder) {
 }
 
 function addCodesForm(productId) {
-  Swal.fire({
-    title: 'إضافة أكواد',
-    html: '<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">أدخل التسلسلي , السري (سطر لكل كود)</p><textarea id="cd-data" class="swal2-textarea" placeholder="SERIAL123 , PIN123&#10;SERIAL124 , PIN124" style="min-height:150px; direction:ltr; text-align:left;"></textarea>',
-    confirmButtonText: 'رفع', showCancelButton: true, cancelButtonText: t('cancel'),
-    preConfirm: function() {
-      var raw = document.getElementById('cd-data').value;
-      var lines = raw.split(/\r?\n/).map(function(x) { return x.trim(); }).filter(Boolean);
-      if (!lines.length) { Swal.showValidationMessage('أدخل كوداً واحداً على الأقل'); return false; }
-      return lines;
-    }
-  }).then(function(r) {
+  Swal.fire({ title: 'إضافة أكواد', html: '<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">أدخل التسلسلي , السري (سطر لكل كود)</p><textarea id="cd-data" class="swal2-textarea" placeholder="SERIAL123 , PIN123&#10;SERIAL124 , PIN124" style="min-height:150px; direction:ltr; text-align:left;"></textarea>', confirmButtonText: 'رفع', showCancelButton: true, cancelButtonText: t('cancel'), preConfirm: function() { var raw = document.getElementById('cd-data').value; var lines = raw.split(/\r?\n/).map(function(x) { return x.trim(); }).filter(Boolean); if (!lines.length) { Swal.showValidationMessage('أدخل كوداً واحداً على الأقل'); return false; } return lines; } }).then(function(r) {
     if (!r.isConfirmed) return;
-    var rows = r.value.map(function(line) {
-      var parts = line.split(',').map(function(p) { return p.trim(); });
-      return { product_id: productId, serial_number: parts[0], pin_code: parts[1] || '' };
-    });
+    var rows = r.value.map(function(line) { var parts = line.split(',').map(function(p) { return p.trim(); }); return { product_id: productId, serial_number: parts[0], pin_code: parts[1] || '' }; });
     Swal.fire({ title: 'جاري الرفع...', didOpen: function() { Swal.showLoading(); } });
-    _supabase.from('digital_codes').insert(rows).then(function(insRes) {
-      if (insRes.error) throw insRes.error;
-      return _supabase.from('digital_codes').select('*', { count: 'exact', head: true }).eq('product_id', productId).eq('is_used', false).then(function(cntRes) {
-        return _supabase.from('card_products').update({ stock: cntRes.count }).eq('id', productId);
-      });
-    }).then(function() { Swal.fire(t('success'), 'تم رفع ' + rows.length + ' كود', 'success'); loadAdminStoreProducts(); }).catch(handleError);
+    _supabase.from('digital_codes').insert(rows).then(function(insRes) { if (insRes.error) throw insRes.error; return _supabase.from('digital_codes').select('*', { count: 'exact', head: true }).eq('product_id', productId).eq('is_used', false).then(function(cntRes) { return _supabase.from('card_products').update({ stock: cntRes.count }).eq('id', productId); }); }).then(function() { Swal.fire(t('success'), 'تم رفع ' + rows.length + ' كود', 'success'); loadAdminStoreProducts(); }).catch(handleError);
   });
 }
