@@ -1,5 +1,5 @@
 // ============================================================
-// cards.js — النسخة النهائية الشاملة (الإصدار الذهبي)
+// cards.js — النسخة النهائية (مع إصلاح QR 100%)
 // ============================================================
 var cardsState = { currentCategory: null, currentCompany: null, categories: [], orderQty: 1, currentProduct: null };
 var isCheckingOut = false;
@@ -159,16 +159,17 @@ function checkoutCart() {
                   '<div style="background: white; border-radius: 8px; padding: 10px; margin-top: 10px; display: inline-block;"><div id="' + qrId + '"><div style="color:#666; font-size:10px;">جاري تكوين QR...</div></div></div>' +
                 '</div>' +
               '</div>';
+            // ✅ إصلاح QR: استخدام api.qrserver.com بدلاً من المكتبة
             setTimeout(function() {
-              if (typeof QRCode !== 'undefined' && code.pin) {
-                QRCode.toDataURL(code.pin, { width: 130, margin: 1 }, function(err, url) {
-                  if (!err) {
-                    var el = document.getElementById(qrId);
-                    if (el) el.innerHTML = '<img src="' + url + '" style="width:130px; height:130px;">';
-                  }
-                });
+              var el = document.getElementById(qrId);
+              if (!el) return;
+              if (!code.pin) {
+                el.innerHTML = '<div style="color:#666; font-size:11px;">لا يوجد PIN</div>';
+                return;
               }
-            }, 300);
+              var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=' + encodeURIComponent(code.pin);
+              el.innerHTML = '<img src="' + qrUrl + '" style="width:130px; height:130px; border-radius:8px; display:block;" alt="QR Code">';
+            }, 200);
           });
         } else {
           itemsHtml += '<div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 16px; padding: 20px; margin-bottom: 15px; text-align: center;"><i class="fa-solid fa-clock" style="font-size: 36px; color: #f59e0b; margin-bottom: 10px; display: block;"></i><div style="font-weight: bold; color: #92400e; margin-bottom: 5px; font-size: 15px;">' + escHtml(item.product_name) + '</div><div style="font-size: 12px; color: #78350f;">سيتم التسليم يدوياً من قبل الإدارة</div></div>';
@@ -196,7 +197,7 @@ function copySingle(text, btn) {
   }
 }
 
-// ---------- مشترياتي (للعميل) ----------
+// ---------- مشترياتي (للعميل والمزود) ----------
 function renderMyPurchases() {
   var container = document.getElementById('page-my-purchases');
   if (!container) return;
@@ -226,9 +227,10 @@ function renderMyPurchases() {
           order.digital_codes.forEach(function(c, i) {
             var pinId = 'pin-' + order.id + '-' + i;
             var serId = 'ser-' + order.id + '-' + i;
+            var qrUrl = c.pin_code ? 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(c.pin_code) : '';
             codesHtml += `
               <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-top:8px; border:1px solid #eee;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                   <span style="font-size:12px; color:#666;">رقم تسلسلي:</span>
                   <div>
                     <span id="${serId}" style="font-family:monospace; font-weight:bold; direction:ltr;">••••••••</span>
@@ -236,7 +238,7 @@ function renderMyPurchases() {
                     <button onclick="copySingle('${escJs(c.serial_number)}', this)" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-copy"></i></button>
                   </div>
                 </div>
-                <div style="display:flex; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                   <span style="font-size:12px; color:#666;">رقم سري:</span>
                   <div>
                     <span id="${pinId}" style="font-family:monospace; font-weight:bold; direction:ltr;">••••••••</span>
@@ -244,6 +246,7 @@ function renderMyPurchases() {
                     <button onclick="copySingle('${escJs(c.pin_code)}', this)" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa-solid fa-copy"></i></button>
                   </div>
                 </div>
+                ${qrUrl ? '<div style="text-align:center; margin-top:8px;"><img src="' + qrUrl + '" style="width:100px; height:100px; border-radius:8px;" alt="QR"></div>' : ''}
               </div>
             `;
           });
@@ -467,14 +470,12 @@ function loadAdminStoreOrders() {
         var itemsHtml = (o.card_order_items || []).map(function(i) {
           return '<li style="margin-bottom:5px; padding:8px; background:#f9f9f9; border-radius:6px;"><strong>' + escHtml(i.product_name) + '</strong> × ' + i.quantity + ' = ' + i.subtotal + ' ' + t('currency') + '</li>';
         }).join('');
-        
         var codesHtml = '';
         if (o.digital_codes && o.digital_codes.length > 0) {
           codesHtml = '<div style="margin-top:10px; padding:10px; background:#f0f8ff; border-radius:8px; border:1px solid #bce;"><strong style="font-size:12px; color:var(--primary);">الأكواد المباعة:</strong><ul style="margin:5px 0 0 0; padding-right:15px; font-size:12px; direction:ltr; text-align:left;">';
           o.digital_codes.forEach(function(c) { codesHtml += '<li>Serial: <b>' + escHtml(c.serial_number) + '</b> | PIN: <b>' + escHtml(c.pin_code) + '</b></li>'; });
           codesHtml += '</ul></div>';
         }
-        
         var cust = o.profiles || {};
         html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;"><div style="flex:1;"><div style="font-size:11px; color:var(--text-muted);">#' + String(o.id).substring(0, 8) + '</div><div style="font-weight:bold; color:var(--primary); margin:4px 0;"><i class="fa-solid fa-user"></i> ' + escHtml(cust.full_name || 'غير معروف') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-phone"></i> ' + escHtml(cust.phone || '-') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ' + escHtml(cust.email || '-') + '</div><div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="fa-regular fa-calendar"></i> ' + dateStr + '</div></div><div style="text-align:left;"><div style="font-size:22px; font-weight:bold; color:var(--accent);">' + o.total_amount + '</div><div style="font-size:11px; color:var(--text-muted);">' + t('currency') + '</div></div></div><ul style="margin:0; padding-right:0; list-style:none; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' + codesHtml + '</div>';
       });

@@ -10,7 +10,6 @@ var translations = {
 
 function t(key) { return translations[currentLang][key] || key; }
 
-// ============ دوال مساعدة للمتجر ============
 function escHtml(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
         return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
@@ -24,7 +23,6 @@ function handleError(err) {
     if (Swal.isVisible()) Swal.close();
     Swal.fire(t('error'), (err && err.message) ? err.message : t('error'), 'error');
 }
-// ============================================
 
 function applyTranslations() {
     document.documentElement.lang = currentLang;
@@ -173,7 +171,6 @@ function renderHome() {
 
             var c = adsHtml + '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;"><p style="font-size:14px; font-weight:600; opacity:0.9;">' + t('welcome') + userProfile.full_name + '</p><div class="balance" style="color:white;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div><p style="font-size:12px; opacity:0.8;">' + t('balance_title') + '</p></div>';
 
-            // اختصار المتجر في الرئيسية (لغير المدير)
             if (userProfile.role !== 'admin') {
                 c += '<div class="card" style="padding:15px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; cursor:pointer;" onclick="navTo(\'cards\')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:16px; font-weight:bold;"><i class="fa-solid fa-store"></i> متجر البطاقات</div><div style="font-size:12px; opacity:0.85; margin-top:3px;">بطاقات، ألعاب، اشتراكات...</div></div><i class="fa-solid fa-chevron-left" style="font-size:20px;"></i></div></div>';
             }
@@ -803,7 +800,25 @@ document.addEventListener('DOMContentLoaded', function() {
         pageCart.parentNode.insertBefore(pagePurchases, pageCart.nextSibling);
     }
 
-    // تحميل مكتبة QR
+    // ✅ إصلاح: جعل الشريط السفلي قابلاً للتمرير أفقياً حتى يظهر زر "مشترياتي"
+    var navItemEl = document.querySelector('.nav-item');
+    if (navItemEl && navItemEl.parentNode) {
+        var navParent = navItemEl.parentNode;
+        navParent.style.overflowX = 'auto';
+        navParent.style.flexWrap = 'nowrap';
+        navParent.style.justifyContent = 'flex-start';
+        navParent.style.webkitOverflowScrolling = 'touch';
+        navParent.style.scrollbarWidth = 'none';
+
+        var styleInject = document.createElement('style');
+        styleInject.textContent =
+            '.nav-item { min-width: 60px !important; flex-shrink: 0 !important; }' +
+            '.nav-item span { font-size: 11px !important; white-space: nowrap; }' +
+            '.nav-item::-webkit-scrollbar, nav::-webkit-scrollbar, [class*="bottom"]::-webkit-scrollbar { display: none !important; }';
+        document.head.appendChild(styleInject);
+    }
+
+    // تحميل مكتبة QR (احتياطية - لا تُستخدم الآن)
     if (!window.QRCode) {
         var qrScript = document.createElement('script');
         qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
