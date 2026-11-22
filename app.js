@@ -240,10 +240,46 @@ function setupProAdsControls() {
 
 // ================= 5. المحفظة =================
 function renderWallet() {
-    _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
-        var bal = wRes.data ? Number(wRes.data.balance).toFixed(2) : '0.00';
-        var balCard = '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; margin-bottom:15px;"><p style="font-size:14px; opacity:0.9;">' + t('balance_title') + '</p><div style="font-size:32px; font-weight:bold;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div></div>';
-        document.getElementById('page-wallet').innerHTML = balCard + '<div class="card"><div class="tabs"><div class="tab active" onclick="switchTab(this, \'w-card\')">' + t('tab_card') + '</div><div class="tab" onclick="switchTab(this, \'w-bank\')">' + t('tab_bank') + '</div><div class="tab" onclick="switchTab(this, \'w-with\')">' + t('tab_withdraw') + '</div><div class="tab" onclick="switchTab(this, \'w-trans\')">' + t('tab_transfer') + '</div></div><div id="w-card"><input type="text" id="card-code" placeholder="' + t('card_code') + '"><button class="btn btn-primary" onclick="redeemCard()">' + t('confirm') + '</button></div><div id="w-bank" class="hidden"><div class="bank-details"><p><span>' + t('bank') + ':</span> ' + (platformSettings.bank_name || '-') + '</p><p><span>' + t('name') + ':</span> ' + (platformSettings.account_name || '-') + '</p><p><span>' + t('account') + ':</span> ' + (platformSettings.account_number || '-') + '</p><p><span>IBAN:</span> ' + (platformSettings.iban || '-') + '</p></div><input type="number" id="bank-amt" placeholder="' + t('transfer_amt') + '"><input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);"><button class="btn btn-accent" onclick="submitBankTransfer()">' + t('send_review') + '</button></div><div id="w-with" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('withdraw_note') + '</p><input type="number" id="with-amt" placeholder="' + t('amount') + '"><input type="text" id="with-bank" placeholder="' + t('bank_name') + '"><input type="text" id="with-acc" placeholder="' + t('acc_num') + '"><button class="btn btn-primary" onclick="requestWithdrawal()">' + t('send') + '</button></div><div id="w-trans" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('transfer_note') + '</p><input type="text" id="trans-phone" placeholder="' + t('phone') + '"><button class="btn btn-accent" onclick="searchPhone()">' + t('search') + '</button><div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div><input type="number" id="trans-amt" placeholder="' + t('amount') + '"><button class="btn btn-primary" onclick="executeTransfer()">' + t('transfer_now') + '</button></div></div>';
+    _supabase.from('wallets').select('id, balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
+        if (!wRes.data) return;
+        var bal = Number(wRes.data.balance).toFixed(2);
+        var walletId = wRes.data.id;
+        
+        // جلب سجل المعاملات (آخر 20 معاملة)
+        _supabase.from('transactions').select('*').eq('wallet_id', walletId).order('created_at', { ascending: false }).limit(20).then(function(txRes) {
+            
+            var balCard = '<div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; margin-bottom:15px;"><p style="font-size:14px; opacity:0.9;">' + t('balance_title') + '</p><div style="font-size:32px; font-weight:bold;">' + bal + ' <span style="font-size:16px;">' + t('currency') + '</span></div></div>';
+            
+            var tabsHtml = '<div class="card"><div class="tabs"><div class="tab active" onclick="switchTab(this, \'w-card\')">' + t('tab_card') + '</div><div class="tab" onclick="switchTab(this, \'w-bank\')">' + t('tab_bank') + '</div><div class="tab" onclick="switchTab(this, \'w-with\')">' + t('tab_withdraw') + '</div><div class="tab" onclick="switchTab(this, \'w-trans\')">' + t('tab_transfer') + '</div></div><div id="w-card"><input type="text" id="card-code" placeholder="' + t('card_code') + '"><button class="btn btn-primary" onclick="redeemCard()">' + t('confirm') + '</button></div><div id="w-bank" class="hidden"><div class="bank-details"><p><span>' + t('bank') + ':</span> ' + (platformSettings.bank_name || '-') + '</p><p><span>' + t('name') + ':</span> ' + (platformSettings.account_name || '-') + '</p><p><span>' + t('account') + ':</span> ' + (platformSettings.account_number || '-') + '</p><p><span>IBAN:</span> ' + (platformSettings.iban || '-') + '</p></div><input type="number" id="bank-amt" placeholder="' + t('transfer_amt') + '"><input type="file" id="bank-file" accept="image/*,application/pdf" style="background:var(--card-bg);"><button class="btn btn-accent" onclick="submitBankTransfer()">' + t('send_review') + '</button></div><div id="w-with" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('withdraw_note') + '</p><input type="number" id="with-amt" placeholder="' + t('amount') + '"><input type="text" id="with-bank" placeholder="' + t('bank_name') + '"><input type="text" id="with-acc" placeholder="' + t('acc_num') + '"><button class="btn btn-primary" onclick="requestWithdrawal()">' + t('send') + '</button></div><div id="w-trans" class="hidden"><p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">' + t('transfer_note') + '</p><input type="text" id="trans-phone" placeholder="' + t('phone') + '"><button class="btn btn-accent" onclick="searchPhone()">' + t('search') + '</button><div id="trans-result" style="font-weight:bold; color:var(--primary); margin-bottom:10px;"></div><input type="number" id="trans-amt" placeholder="' + t('amount') + '"><button class="btn btn-primary" onclick="executeTransfer()">' + t('transfer_now') + '</button></div></div>';
+
+            // بناء سجل المعاملات
+            var txHtml = '<div class="card" style="margin-top:15px;"><h4 style="margin-bottom:15px; color:var(--primary);"><i class="fa-solid fa-clock-rotate-left"></i> سجل المعاملات</h4>';
+            if (txRes.data && txRes.data.length > 0) {
+                txRes.data.forEach(function(tx) {
+                    var isAdd = (tx.type === 'deposit' || tx.type === 'earning');
+                    var icon = isAdd ? 'fa-arrow-down' : 'fa-arrow-up';
+                    var color = isAdd ? '#27ae60' : '#e74c3c';
+                    var sign = isAdd ? '+' : '-';
+                    var typeAr = tx.type === 'deposit' ? 'إيداع / شحن' : (tx.type === 'withdrawal' ? 'سحب' : (tx.type === 'payment' ? 'دفع / خصم' : 'أرباح'));
+                    var date = new Date(tx.created_at).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                    txHtml += '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:12px 0;">' +
+                        '<div style="display:flex; align-items:center; gap:12px;">' +
+                            '<div style="width:40px; height:40px; border-radius:50%; background:' + color + '15; color:' + color + '; display:flex; align-items:center; justify-content:center; font-size:18px;"><i class="fa-solid ' + icon + '"></i></div>' +
+                            '<div><div style="font-weight:bold; font-size:14px; color:var(--text);">' + typeAr + '</div>' +
+                            '<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">' + (tx.reference || 'معاملة مالية') + '</div>' +
+                            '<div style="font-size:10px; color:#999; margin-top:4px;"><i class="fa-regular fa-calendar"></i> ' + date + '</div></div>' +
+                        '</div>' +
+                        '<div style="text-align:left;"><div style="font-weight:bold; color:' + color + '; font-size:16px;">' + sign + tx.amount + ' ' + t('currency') + '</div></div>' +
+                    '</div>';
+                });
+            } else {
+                txHtml += '<p style="text-align:center; color:var(--text-muted); padding:20px 0;">لا توجد معاملات سابقة.</p>';
+            }
+            txHtml += '</div>';
+
+            document.getElementById('page-wallet').innerHTML = balCard + tabsHtml + txHtml;
+        });
     });
 }
 
@@ -377,16 +413,32 @@ function orderService(id) {
     _supabase.from('services').select('*').eq('id', id).maybeSingle().then(function(sRes) {
         if (!sRes.data) return;
         var s = sRes.data;
-        _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
+        _supabase.from('wallets').select('id, balance').eq('user_id', currentUser.id).maybeSingle().then(function(wRes) {
             if (!wRes.data || wRes.data.balance < s.price) { Swal.fire(t('insufficient_balance'), t('top_up'), 'warning'); return; }
             var msg = t('deduct_for').replace('{amount}', s.price + ' ' + t('currency')).replace('{title}', s.title);
+            
             Swal.fire({ title: t('confirm_order'), text: msg, showCancelButton: true, confirmButtonText: t('yes'), cancelButtonText: t('cancel') }).then(function(r) {
                 if (!r.isConfirmed) return;
                 Swal.fire({ title: t('ordering'), didOpen: function() { Swal.showLoading(); } });
+                
+                // 1. خصم المبلغ من محفظة المستخدم
                 _supabase.from('wallets').update({ balance: wRes.data.balance - s.price }).eq('user_id', currentUser.id).then(function() {
-                    _supabase.from('orders').insert([{ client_id: currentUser.id, service_id: s.id, total_amount: s.price, status: 'in_progress' }]).then(function() {
-                        Swal.fire(t('success'), t('order_success'), 'success');
-                        navTo('orders');
+                    // 2. إضافة المبلغ لمحفظة المزود
+                    _supabase.from('wallets').select('id, balance').eq('user_id', s.provider_id).maybeSingle().then(function(pwRes) {
+                        if (pwRes.data) {
+                            _supabase.from('wallets').update({ balance: pwRes.data.balance + s.price }).eq('id', pwRes.data.id);
+                            // 3. تسجيل المعاملة للمزود (أرباح)
+                            _supabase.from('transactions').insert([{ wallet_id: pwRes.data.id, type: 'earning', amount: s.price, reference: 'أرباح طلب خدمة: ' + s.title }]);
+                        }
+                        
+                        // 4. تسجيل المعاملة للمستخدم (خصم)
+                        _supabase.from('transactions').insert([{ wallet_id: wRes.data.id, type: 'payment', amount: s.price, reference: 'طلب خدمة: ' + s.title }]).then(function() {
+                            // 5. إنشاء الطلب في النظام
+                            _supabase.from('orders').insert([{ client_id: currentUser.id, service_id: s.id, total_amount: s.price, status: 'in_progress' }]).then(function() {
+                                Swal.fire(t('success'), t('order_success'), 'success');
+                                navTo('orders');
+                            });
+                        });
                     });
                 });
             });
