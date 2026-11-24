@@ -388,7 +388,7 @@ function submitBankTransfer() {
     });
 }
 
-// 🛡️ نسخة دفاعية: تُجبر الحالة على pending حتى لو غيّرها trigger
+// طلب السحب الجذري (نظيف وبدون ترقيع)
 function requestWithdrawal() {
     var amt = parseFloat(document.getElementById('with-amt').value);
     var name = document.getElementById('with-name').value.trim();
@@ -407,51 +407,30 @@ function requestWithdrawal() {
         var bal = Number(wr.data.balance);
         if (bal < amt) return Swal.fire(t('insufficient_balance'), 'رصيدك غير كافٍ', 'warning');
 
-        var newBal = bal - amt;
-        var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
-
-        // 1) تجميد الرصيد
-        _supabase.from('wallets').update({ balance: newBal }).eq('id', wr.data.id).then(function(upd) {
+        // 1) تجميد الرصيد (خصم فوري)
+        _supabase.from('wallets').update({ balance: bal - amt }).eq('id', wr.data.id).then(function(upd) {
             if (upd.error) return handleError(upd.error);
 
-            // 2) إدراج الطلب
+            var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
+            
+            // 2) إدراج الطلب (قاعدة البيانات الآن تقبل وتُثبّت الحالة pending)
             _supabase.from('withdrawals').insert([{
                 user_id: currentUser.id,
                 amount: amt,
                 bank_details: details,
                 status: 'pending'
-            }]).select().then(function(ins) {
+            }]).then(function(ins) {
                 if (ins.error) {
                     _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
                     return handleError(ins.error);
                 }
-                var row = ins.data && ins.data[0];
-                if (!row) {
-                    _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
-                    return handleError(new Error('لم يتم إنشاء الطلب'));
-                }
-
-                var finish = function() {
-                    _supabase.from('transactions').insert([{ wallet_id: wr.data.id, type: 'withdrawal', amount: amt, reference: 'طلب سحب (مجمّد)' }]);
-                    _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
-                    Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد ' + amt + ' ' + t('currency'), 'success');
-                    renderWallet();
-                };
-
-                // 3) إذا غيّر trigger الحالة → أعِدها pending قسرياً
-                if (row.status === 'pending') {
-                    finish();
-                } else {
-                    console.warn('[withdrawal] trigger غيّر الحالة إلى', row.status, '— إعادة إلى pending');
-                    _supabase.from('withdrawals').update({ status: 'pending' }).eq('id', row.id).then(function(u) {
-                        if (u.error) {
-                            _supabase.from('withdrawals').delete().eq('id', row.id);
-                            _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
-                            return handleError(u.error);
-                        }
-                        finish();
-                    });
-                }
+                
+                // 3) سجل المعاملة وإشعار الإدارة
+                _supabase.from('transactions').insert([{ wallet_id: wr.data.id, type: 'withdrawal', amount: amt, reference: 'طلب سحب (مجمّد)' }]);
+                _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
+                
+                Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد ' + amt + ' ' + t('currency'), 'success');
+                renderWallet();
             });
         });
     }).catch(handleError);
@@ -979,6 +958,7 @@ function updateChatPrice() {
     });
 }
 
+// ===== قائمة طلبات السحب للمدير =====
 function loadAdminWithdrawals() {
     var box = document.getElementById('a-with');
     if (!box) return;
@@ -1207,7 +1187,6 @@ function showAdminAlert(title, message) {
 
     if (typeof loadNotifications === 'function') loadNotifications();
 
-    // ✅ حدّث فقط التبويب المفتوح، لا تمسح الصفحة كلها
     var aWith = document.getElementById('a-with');
     if (aWith && !aWith.classList.contains('hidden')) loadAdminWithdrawals();
 
