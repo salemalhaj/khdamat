@@ -772,6 +772,113 @@ function updateChatPrice() {
     });
 }
 
+function loadAdminWithdrawals() {
+    var box = document.getElementById('a-with');
+    if (!box) return;
+    box.innerHTML = '<p>جاري التحميل...</p>';
+    _supabase.from('withdrawals')
+        .select('*, profiles!withdrawals_user_id_fkey(full_name, phone, email, role, created_at)')
+        .in('status', ['pending', 'processing'])
+        .order('created_at', { ascending: false })
+        .then(function(res) {
+            if (!res.data || !res.data.length) {
+                box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد طلبات سحب معلقة.</p></div>';
+                return;
+            }
+            var userIds = res.data.map(function(w) { return w.user_id; });
+            _supabase.from('wallets').select('user_id, balance').in('user_id', userIds).then(function(wRes) {
+                var balances = {};
+                (wRes.data || []).forEach(function(w) { balances[w.user_id] = w.balance; });
+
+                var html = '';
+                res.data.forEach(function(w) {
+                    var cust = w.profiles || {};
+                    var isPending = w.status === 'pending';
+                    var statusLabel = isPending ? '🟠 في انتظار الموافقة' : '🔵 قيد المعالجة';
+                    var statusColor = isPending ? '#f39c12' : '#3498db';
+                    var roleText = cust.role === 'admin' ? 'مدير' : (cust.role === 'provider' ? 'مزود خدمة' : 'مستخدم');
+                    var userBalance = (balances[w.user_id] !== undefined && balances[w.user_id] !== null) ? Number(balances[w.user_id]).toFixed(2) : '-';
+                    var createdDate = cust.created_at ? new Date(cust.created_at).toLocaleDateString('ar-EG') : '-';
+
+                    html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid ' + statusColor + ';">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+                            '<span style="background:' + statusColor + '; color:white; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">' + statusLabel + '</span>' +
+                            '<strong style="color:var(--accent); font-size:18px;">' + w.amount + ' ' + t('currency') + '</strong>' +
+                        '</div>' +
+                        '<div style="font-size:13px; line-height:1.9; background:#eef5ff; padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid #bce;">' +
+                            '<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; font-size:14px;"><i class="fa-solid fa-user-circle"></i> الملف الشخصي للمستخدم</div>' +
+                            '<div><i class="fa-solid fa-user"></i> الاسم: <b>' + escHtml(cust.full_name || 'غير معروف') + '</b></div>' +
+                            '<div><i class="fa-solid fa-phone"></i> الهاتف: <b dir="ltr">' + escHtml(cust.phone || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-envelope"></i> الإيميل: <b>' + escHtml(cust.email || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-id-badge"></i> الدور: <b>' + roleText + '</b></div>' +
+                            '<div><i class="fa-solid fa-wallet"></i> الرصيد الحالي: <b style="color:var(--accent);">' + userBalance + ' ' + t('currency') + '</b></div>' +
+                            '<div><i class="fa-regular fa-calendar"></i> عضو منذ: <b>' + createdDate + '</b></div>' +
+                            '<div style="font-size:11px; color:#666; margin-top:3px; word-break:break-all;">ID: <span style="font-family:monospace; direction:ltr;">' + String(w.user_id) + '</span></div>' +
+                        '</div>' +
+                        '<div style="font-size:13px; line-height:1.9; background:#fff8e5; padding:12px; border-radius:8px; border:1px solid #fce5a8;">' +
+                            '<div style="font-weight:bold; color:#c97d00; margin-bottom:6px; font-size:14px;"><i class="fa-solid fa-money-bill-transfer"></i> بيانات السحب المطلوبة</div>' +
+                            '<div><i class="fa-solid fa-user-tag"></i> الاسم في الحساب البنكي: <b>' + escHtml(w.full_name || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-building-columns"></i> اسم المصرف: <b>' + escHtml(w.bank_name || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-code-branch"></i> الفرع: <b>' + escHtml(w.branch || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-hashtag"></i> رقم الحساب: <b style="font-family:monospace; direction:ltr;">' + escHtml(w.account_number || '-') + '</b></div>' +
+                            '<div><i class="fa-solid fa-globe"></i> IBAN: <b style="direction:ltr; display:inline-block; font-family:monospace; word-break:break-all;">' + escHtml(w.iban || '-') + '</b></div>' +
+                            '<div style="margin-top:6px; color:#666; font-size:12px;"><i class="fa-regular fa-clock"></i> تاريخ الطلب: ' + new Date(w.created_at).toLocaleString('ar-EG') + '</div>' +
+                        '</div>' +
+                        '<div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">' +
+                            (isPending ?
+                                '<button class="btn btn-primary btn-sm" style="margin:0; flex:1; min-width:130px;" onclick="startProcessingWithdrawal(\'' + w.id + '\')"><i class="fa-solid fa-play"></i> بدء المعالجة</button>' :
+                                '<button class="btn btn-accent btn-sm" style="margin:0; flex:1; min-width:130px;" onclick="completeWithdrawal(\'' + w.id + '\')"><i class="fa-solid fa-check-circle"></i> تم السحب ← محفظتي</button>'
+                            ) +
+                            '<button class="btn btn-danger btn-sm" style="margin:0; flex:1; min-width:130px;" onclick="rejectAdminWithdrawal(\'' + w.id + '\')"><i class="fa-solid fa-undo"></i> رفض وإرجاع للعميل</button>' +
+                        '</div>' +
+                    '</div>';
+                });
+                box.innerHTML = html;
+            }).catch(function(e) { box.innerHTML = '<p style="color:red;">خطأ في جلب الأرصدة: ' + e.message + '</p>'; });
+        }).catch(handleError);
+}
+
+function completeWithdrawal(id) {
+    Swal.fire({
+        title: 'تأكيد إتمام السحب؟',
+        html: 'سيتم:<br>• نقل المبلغ من "التجميد" إلى <b>محفظتك (المدير)</b>.<br>• تسجيل العملية في سجل العميل.<br><br><b>⚠️ تأكد أنك حوّلت المبلغ فعلياً للعميل قبل المتابعة.</b>',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، تم السحب',
+        cancelButtonText: 'إلغاء'
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+        Swal.fire({ title: 'جاري التنفيذ...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+        _supabase.rpc('admin_complete_withdrawal', { p_withdrawal_id: id }).then(function(res) {
+            if (res.error) throw res.error;
+            if (!res.data || !res.data.success) throw new Error(res.data ? res.data.message : 'فشل');
+            Swal.fire('تم', 'تمت العملية. المبلغ الآن في محفظتك.', 'success');
+            loadAdminWithdrawals();
+        }).catch(handleError);
+    });
+}
+
+function rejectAdminWithdrawal(id) {
+    Swal.fire({
+        title: 'سبب الرفض',
+        html: 'سيتم إرجاع المبلغ المجمد إلى <b>محفظة العميل</b>.',
+        input: 'text',
+        inputPlaceholder: 'اكتب سبب الرفض...',
+        showCancelButton: true,
+        confirmButtonText: 'رفض وإرجاع للعميل',
+        cancelButtonText: 'إلغاء'
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+        Swal.fire({ title: 'جاري التنفيذ...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+        _supabase.rpc('admin_reject_withdrawal', { p_withdrawal_id: id, p_reason: r.value || 'مرفوض' }).then(function(res) {
+            if (res.error) throw res.error;
+            if (!res.data || !res.data.success) throw new Error(res.data ? res.data.message : 'فشل');
+            Swal.fire('تم', 'تم رفض الطلب وإرجاع ' + res.data.refunded + ' ' + t('currency') + ' للعميل.', 'success');
+            loadAdminWithdrawals();
+        }).catch(handleError);
+    });
+}
+
 // ================= 10. الإشعارات والجلسة =================
 function loadNotifications() {
     if (!currentUser) return;
