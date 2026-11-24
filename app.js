@@ -4,8 +4,8 @@ var currentLang = localStorage.getItem('lang') || 'ar';
 var currentUser = null, userProfile = null, platformSettings = {};
 
 var translations = {
-    ar: { app_name: "منصة خدمات", app_name_short: "خدمات", login_title: "سجل دخولك", email: "البريد الإلكتروني", password: "كلمة المرور", login_btn: "دخول", create_acc: "أنشئ حساباً جديداً", signup_title: "حساب جديد", full_name: "الاسم الكامل", phone: "رقم الهاتف", role_user: "صاحب عمل", role_provider: "مزود خدمة", signup_btn: "تسجيل", have_acc: "لديك حساب؟ سجل الدخول", nav_home: "الرئيسية", nav_services: "الخدمات", nav_wallet: "المحفظة", nav_orders: "طلباتي", nav_my_services: "خدماتي", nav_messages: "الرسائل", nav_admin: "الإدارة", nav_store: "المتجر", nav_cart: "السلة", nav_purchases: "مشترياتي", welcome: "مرحباً، ", balance_title: "رصيد محفظتك", currency: "د.ل", deposit: "شحن", request_service: "طلب خدمة", add_service: "أضف خدمتك", admin_panel_btn: "لوحة الإدارة", tab_card: "بطاقة شحن", tab_bank: "تحويل بنكي", tab_withdraw: "سحب", tab_transfer: "تحويل", card_code: "أدخل كود البطاقة", confirm: "تأكيد", bank: "المصرف", name: "الاسم", account: "الحساب", branch: "الفرع", iban: "رقم الحساب الدولي (IBAN)", transfer_amt: "المبلغ المحول", send_review: "إرسال للمراجعة", withdraw_note: "سيتم تجميد المبلغ فوراً ويُعاد إليك عند الإلغاء أو الرفض. لا يمكن الإلغاء بعد بدء المعالجة.", pending_withdrawals: "طلبات السحب المعلقة", processing_withdrawals: "قيد المعالجة", completed_withdrawals: "تمت العملية", cancel_request: "إلغاء الطلب", amount: "المبلغ", bank_name: "اسم المصرف", acc_num: "رقم الحساب", send: "إرسال", transfer_note: "حول فوراً عبر رقم هاتف المستخدم.", search: "بحث", transfer_now: "تحويل الآن", services_title: "الخدمات", new_service: "خدمة جديدة", status: "الحالة", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", no_services: "لا يوجد خدمات.", no_services_avail: "لا يوجد خدمات متاحة.", request: "طلب", add_service_title: "إضافة خدمة", price: "السعر", desc: "الوصف", cancel: "إلغاء", orders_title: "طلباتي", no_orders: "لا يوجد طلبات.", admin_title: "الإدارة", users: "المستخدمون", total_money: "إجمالي الأموال", my_balance: "رصيد محفظتي", withdrawals: "سحب", transfers: "تحويلات", cards: "بطاقات", approve: "موافقة", reject: "رفض", view_receipt: "عرض الإيصال", generate: "توليد", card_value: "قيمة البطاقة", count: "العدد", alert: "تنبيه", error: "خطأ", success: "تم", fill_fields: "ملء جميع الحقول", login_failed: "فشل الدخول", invalid_creds: "البريد غير مؤكد أو كلمة المرور خاطئة", profile_not_found: "الملف الشخصي غير موجود", creating: "جاري الإنشاء...", created_login: "تم إنشاء الحساب! يرجى تفقد بريدك الإلكتروني لتأكيد الحساب، ثم قم بتسجيل الدخول.", verifying: "جاري التحقق...", sending: "جاري الإرسال...", uploading: "جاري الرفع...", request_sent: "تم إرسال الطلب", upload_failed: "فشل رفع الملف", number_not_found: "رقم غير موجود", transferring: "جاري التحويل...", transfer_success: "تم التحويل بنجاح", insufficient_balance: "رصيد غير كافٍ", top_up: "اشحن محفظتك", confirm_order: "تأكيد", deduct_for: "خصم {amount} لطلب {title}؟", yes: "نعم", ordering: "جاري الطلب...", order_success: "تم الطلب بنجاح", loading: "جاري التحميل...", generating: "جاري التوليد...", generated: "تم التوليد", reject_reason: "سبب الرفض", rejected_msg: "تم الرفض", approved_msg: "تمت الموافقة", bal_insufficient: "الرصيد غير كافٍ", added_msg: "تمت الإضافة", profile: "الملف الشخصي", role: "الدور", role_admin: "مدير", role_provider: "مزود", role_user: "مستخدم", close: "إغلاق", card_redeemed: "تم شحن البطاقة بنجاح!", card_error: "البطاقة غير صالحة أو مستخدمة" },
-    en: { app_name: "Khdamat", app_name_short: "Khdamat", login_title: "Login", email: "Email", password: "Password", login_btn: "Login", create_acc: "Create Account", signup_title: "New Account", full_name: "Full Name", phone: "Phone", role_user: "Client", role_provider: "Provider", signup_btn: "Sign Up", have_acc: "Have an account? Login", nav_home: "Home", nav_services: "Services", nav_wallet: "Wallet", nav_orders: "Orders", nav_my_services: "My Services", nav_messages: "Messages", nav_admin: "Admin", nav_store: "Store", nav_cart: "Cart", nav_purchases: "My Purchases", welcome: "Welcome, ", balance_title: "Wallet Balance", currency: "LYD", deposit: "Deposit", request_service: "Request Service", add_service: "Add your service", admin_panel_btn: "Admin Panel", tab_card: "Recharge Card", tab_bank: "Bank Transfer", tab_withdraw: "Withdraw", tab_transfer: "Transfer", card_code: "Enter card code", confirm: "Confirm", bank: "Bank", name: "Name", account: "Account", branch: "Branch", iban: "IBAN", transfer_amt: "Amount", send_review: "Send for Review", withdraw_note: "Amount will be frozen and refunded on cancel/reject. Cannot cancel after processing starts.", pending_withdrawals: "Pending Withdrawals", processing_withdrawals: "Processing", completed_withdrawals: "Completed", cancel_request: "Cancel Request", amount: "Amount", bank_name: "Bank Name", acc_num: "Account Number", send: "Send", transfer_note: "Transfer via phone number.", search: "Search", transfer_now: "Transfer Now", services_title: "Services", new_service: "New Service", status: "Status", approved: "Approved", pending: "Pending", rejected: "Rejected", no_services: "No services found.", no_services_avail: "No services available.", request: "Request", add_service_title: "Add Service", price: "Price", desc: "Description", cancel: "Cancel", orders_title: "My Orders", no_orders: "No orders found.", admin_title: "Admin Panel", users: "Users", total_money: "Total Money", my_balance: "My Balance", withdrawals: "Withdrawals", transfers: "Transfers", cards: "Cards", approve: "Approve", reject: "Reject", view_receipt: "View Receipt", generate: "Generate", card_value: "Card Value", count: "Count", alert: "Alert", error: "Error", success: "Done", fill_fields: "Please fill all fields", login_failed: "Login Failed", invalid_creds: "Email not confirmed or wrong password", profile_not_found: "Profile not found", creating: "Creating...", created_login: "Account created! Please check your email to confirm, then login.", verifying: "Verifying...", sending: "Sending...", uploading: "Uploading...", request_sent: "Request sent", upload_failed: "Upload failed", number_not_found: "Number not found", transferring: "Transferring...", transfer_success: "Transferred!", insufficient_balance: "Insufficient balance", top_up: "Top up your wallet", confirm_order: "Confirm", deduct_for: "Deduct {amount} for {title}?", yes: "Yes", ordering: "Ordering...", order_success: "Order successful", loading: "Loading...", generating: "Generating...", generated: "Generated!", reject_reason: "Rejection reason", rejected_msg: "Rejected", approved_msg: "Approved", bal_insufficient: "Insufficient balance", added_msg: "Added!", profile: "Profile", role: "Role", role_admin: "Admin", role_provider: "Provider", role_user: "User", close: "Close", card_redeemed: "Card redeemed!", card_error: "Invalid or used card" }
+    ar: { app_name: "منصة خدمات", app_name_short: "خدمات", login_title: "سجل دخولك", email: "البريد الإلكتروني", password: "كلمة المرور", login_btn: "دخول", create_acc: "أنشئ حساباً جديداً", signup_title: "حساب جديد", full_name: "الاسم الكامل", phone: "رقم الهاتف", role_user: "صاحب عمل", role_provider: "مزود خدمة", signup_btn: "تسجيل", have_acc: "لديك حساب؟ سجل الدخول", nav_home: "الرئيسية", nav_services: "الخدمات", nav_wallet: "المحفظة", nav_orders: "طلباتي", nav_my_services: "خدماتي", nav_messages: "الرسائل", nav_admin: "الإدارة", nav_store: "المتجر", nav_cart: "السلة", nav_purchases: "مشترياتي", welcome: "مرحباً، ", balance_title: "رصيد محفظتك", currency: "د.ل", deposit: "شحن", request_service: "طلب خدمة", add_service: "أضف خدمتك", admin_panel_btn: "لوحة الإدارة", tab_card: "بطاقة شحن", tab_bank: "تحويل بنكي", tab_withdraw: "سحب", tab_transfer: "تحويل", card_code: "أدخل كود البطاقة", confirm: "تأكيد", bank: "المصرف", name: "الاسم", account: "الحساب", branch: "الفرع", iban: "رقم الحساب الدولي (IBAN)", transfer_amt: "المبلغ المحول", send_review: "إرسال للمراجعة", withdraw_note: "سيتم تجميد المبلغ فوراً ويُعاد إليك عند الإلغاء أو الرفض. لا يمكن الإلغاء بعد بدء المعالجة.", pending_withdrawals: "طلبات السحب المعلقة", processing_withdrawals: "قيد المعالجة", cancel_request: "إلغاء الطلب", amount: "المبلغ", bank_name: "اسم المصرف", acc_num: "رقم الحساب", send: "إرسال", transfer_note: "حول فوراً عبر رقم هاتف المستخدم.", search: "بحث", transfer_now: "تحويل الآن", services_title: "الخدمات", new_service: "خدمة جديدة", status: "الحالة", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", no_services: "لا يوجد خدمات.", no_services_avail: "لا يوجد خدمات متاحة.", request: "طلب", add_service_title: "إضافة خدمة", price: "السعر", desc: "الوصف", cancel: "إلغاء", orders_title: "طلباتي", no_orders: "لا يوجد طلبات.", admin_title: "الإدارة", users: "المستخدمون", total_money: "إجمالي الأموال", my_balance: "رصيد محفظتي", withdrawals: "سحب", transfers: "تحويلات", cards: "بطاقات", approve: "موافقة", reject: "رفض", view_receipt: "عرض الإيصال", generate: "توليد", card_value: "قيمة البطاقة", count: "العدد", alert: "تنبيه", error: "خطأ", success: "تم", fill_fields: "ملء جميع الحقول", login_failed: "فشل الدخول", invalid_creds: "البريد غير مؤكد أو كلمة المرور خاطئة", profile_not_found: "الملف الشخصي غير موجود", creating: "جاري الإنشاء...", created_login: "تم إنشاء الحساب! يرجى تفقد بريدك الإلكتروني لتأكيد الحساب، ثم قم بتسجيل الدخول.", verifying: "جاري التحقق...", sending: "جاري الإرسال...", uploading: "جاري الرفع...", request_sent: "تم إرسال الطلب", upload_failed: "فشل رفع الملف", number_not_found: "رقم غير موجود", transferring: "جاري التحويل...", transfer_success: "تم التحويل بنجاح", insufficient_balance: "رصيد غير كافٍ", top_up: "اشحن محفظتك", confirm_order: "تأكيد", deduct_for: "خصم {amount} لطلب {title}؟", yes: "نعم", ordering: "جاري الطلب...", order_success: "تم الطلب بنجاح", loading: "جاري التحميل...", generating: "جاري التوليد...", generated: "تم التوليد", reject_reason: "سبب الرفض", rejected_msg: "تم الرفض", approved_msg: "تمت الموافقة", bal_insufficient: "الرصيد غير كافٍ", added_msg: "تمت الإضافة", profile: "الملف الشخصي", role: "الدور", role_admin: "مدير", role_provider: "مزود", role_user: "مستخدم", close: "إغلاق", card_redeemed: "تم شحن البطاقة بنجاح!", card_error: "البطاقة غير صالحة أو مستخدمة" },
+    en: { app_name: "Khdamat", app_name_short: "Khdamat", login_title: "Login", email: "Email", password: "Password", login_btn: "Login", create_acc: "Create Account", signup_title: "New Account", full_name: "Full Name", phone: "Phone", role_user: "Client", role_provider: "Provider", signup_btn: "Sign Up", have_acc: "Have an account? Login", nav_home: "Home", nav_services: "Services", nav_wallet: "Wallet", nav_orders: "Orders", nav_my_services: "My Services", nav_messages: "Messages", nav_admin: "Admin", nav_store: "Store", nav_cart: "Cart", nav_purchases: "My Purchases", welcome: "Welcome, ", balance_title: "Wallet Balance", currency: "LYD", deposit: "Deposit", request_service: "Request Service", add_service: "Add your service", admin_panel_btn: "Admin Panel", tab_card: "Recharge Card", tab_bank: "Bank Transfer", tab_withdraw: "Withdraw", tab_transfer: "Transfer", card_code: "Enter card code", confirm: "Confirm", bank: "Bank", name: "Name", account: "Account", branch: "Branch", iban: "IBAN", transfer_amt: "Amount", send_review: "Send for Review", withdraw_note: "Amount will be frozen and refunded on cancel/reject. Cannot cancel after processing starts.", pending_withdrawals: "Pending Withdrawals", processing_withdrawals: "Processing", cancel_request: "Cancel Request", amount: "Amount", bank_name: "Bank Name", acc_num: "Account Number", send: "Send", transfer_note: "Transfer via phone number.", search: "Search", transfer_now: "Transfer Now", services_title: "Services", new_service: "New Service", status: "Status", approved: "Approved", pending: "Pending", rejected: "Rejected", no_services: "No services found.", no_services_avail: "No services available.", request: "Request", add_service_title: "Add Service", price: "Price", desc: "Description", cancel: "Cancel", orders_title: "My Orders", no_orders: "No orders found.", admin_title: "Admin Panel", users: "Users", total_money: "Total Money", my_balance: "My Balance", withdrawals: "Withdrawals", transfers: "Transfers", cards: "Cards", approve: "Approve", reject: "Reject", view_receipt: "View Receipt", generate: "Generate", card_value: "Card Value", count: "Count", alert: "Alert", error: "Error", success: "Done", fill_fields: "Please fill all fields", login_failed: "Login Failed", invalid_creds: "Email not confirmed or wrong password", profile_not_found: "Profile not found", creating: "Creating...", created_login: "Account created! Please check your email to confirm, then login.", verifying: "Verifying...", sending: "Sending...", uploading: "Uploading...", request_sent: "Request sent", upload_failed: "Upload failed", number_not_found: "Number not found", transferring: "Transferring...", transfer_success: "Transferred!", insufficient_balance: "Insufficient balance", top_up: "Top up your wallet", confirm_order: "Confirm", deduct_for: "Deduct {amount} for {title}?", yes: "Yes", ordering: "Ordering...", order_success: "Order successful", loading: "Loading...", generating: "Generating...", generated: "Generated!", reject_reason: "Rejection reason", rejected_msg: "Rejected", approved_msg: "Approved", bal_insufficient: "Insufficient balance", added_msg: "Added!", profile: "Profile", role: "Role", role_admin: "Admin", role_provider: "Provider", role_user: "User", close: "Close", card_redeemed: "Card redeemed!", card_error: "Invalid or used card" }
 };
 
 function t(key) { return translations[currentLang][key] || key; }
@@ -388,6 +388,7 @@ function submitBankTransfer() {
     });
 }
 
+// 🛡️ نسخة دفاعية: تُجبر الحالة على pending حتى لو غيّرها trigger
 function requestWithdrawal() {
     var amt = parseFloat(document.getElementById('with-amt').value);
     var name = document.getElementById('with-name').value.trim();
@@ -407,24 +408,50 @@ function requestWithdrawal() {
         if (bal < amt) return Swal.fire(t('insufficient_balance'), 'رصيدك غير كافٍ', 'warning');
 
         var newBal = bal - amt;
+        var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
+
+        // 1) تجميد الرصيد
         _supabase.from('wallets').update({ balance: newBal }).eq('id', wr.data.id).then(function(upd) {
             if (upd.error) return handleError(upd.error);
 
-            var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
+            // 2) إدراج الطلب
             _supabase.from('withdrawals').insert([{
                 user_id: currentUser.id,
                 amount: amt,
                 bank_details: details,
                 status: 'pending'
-            }]).then(function(ins) {
+            }]).select().then(function(ins) {
                 if (ins.error) {
                     _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
                     return handleError(ins.error);
                 }
-                _supabase.from('transactions').insert([{ wallet_id: wr.data.id, type: 'withdrawal', amount: amt, reference: 'طلب سحب (مجمّد)' }]);
-                _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
-                Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد المبلغ (' + amt + ' ' + t('currency') + ')', 'success');
-                renderWallet();
+                var row = ins.data && ins.data[0];
+                if (!row) {
+                    _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
+                    return handleError(new Error('لم يتم إنشاء الطلب'));
+                }
+
+                var finish = function() {
+                    _supabase.from('transactions').insert([{ wallet_id: wr.data.id, type: 'withdrawal', amount: amt, reference: 'طلب سحب (مجمّد)' }]);
+                    _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
+                    Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد ' + amt + ' ' + t('currency'), 'success');
+                    renderWallet();
+                };
+
+                // 3) إذا غيّر trigger الحالة → أعِدها pending قسرياً
+                if (row.status === 'pending') {
+                    finish();
+                } else {
+                    console.warn('[withdrawal] trigger غيّر الحالة إلى', row.status, '— إعادة إلى pending');
+                    _supabase.from('withdrawals').update({ status: 'pending' }).eq('id', row.id).then(function(u) {
+                        if (u.error) {
+                            _supabase.from('withdrawals').delete().eq('id', row.id);
+                            _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
+                            return handleError(u.error);
+                        }
+                        finish();
+                    });
+                }
             });
         });
     }).catch(handleError);
@@ -952,7 +979,6 @@ function updateChatPrice() {
     });
 }
 
-// ===== قائمة طلبات السحب للمدير (بدون اعتماد على اسم FK) =====
 function loadAdminWithdrawals() {
     var box = document.getElementById('a-with');
     if (!box) return;
@@ -974,7 +1000,7 @@ function loadAdminWithdrawals() {
                 _supabase.from('profiles').select('id, full_name, phone, email, role, created_at').in('id', userIds),
                 _supabase.from('wallets').select('user_id, balance').in('user_id', userIds)
             ]).then(function(rs) {
-                if (rs[0].error) { box.innerHTML = '<p style="color:red;">خطأ في جلب البروفايلات: ' + escHtml(rs[0].error.message) + '</p>'; return; }
+                if (rs[0].error) { box.innerHTML = '<p style="color:red;">خطأ: ' + escHtml(rs[0].error.message) + '</p>'; return; }
                 var profilesMap = {};
                 (rs[0].data || []).forEach(function(p) { profilesMap[p.id] = p; });
                 var balances = {};
@@ -1161,7 +1187,6 @@ var adminWithdrawChannel = null;
 var adminTransferChannel = null;
 var adminWithdrawalUpdatesChannel = null;
 
-// 🔴 مُحسّنة: لا تمسح الصفحة، تُحدّث فقط التبويب المفتوح
 function showAdminAlert(title, message) {
     adminAlertAudio.play().catch(function(e) { console.log("الصوت محظور", e); });
 
@@ -1182,13 +1207,12 @@ function showAdminAlert(title, message) {
 
     if (typeof loadNotifications === 'function') loadNotifications();
 
-    // فقط حدّث التبويب المفتوح حالياً
+    // ✅ حدّث فقط التبويب المفتوح، لا تمسح الصفحة كلها
     var aWith = document.getElementById('a-with');
     if (aWith && !aWith.classList.contains('hidden')) loadAdminWithdrawals();
 
     var aTrans = document.getElementById('a-trans');
     if (aTrans && !aTrans.classList.contains('hidden')) {
-        // إعادة تحميل قسم التحويلات دون فقدان التبويب
         var activeTab = document.querySelector('.tab.active');
         renderAdmin();
         if (activeTab) {
