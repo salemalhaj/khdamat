@@ -109,9 +109,17 @@ function setupUI() {
     applyTranslations();
     if (typeof loadNotifications === 'function') loadNotifications();
     if (typeof updateCartBadge === 'function') updateCartBadge();
+    
+    // بدء تشغيل مستمعي الأحداث للمدير
+    if (userProfile.role === 'admin') startAdminRealtimeListeners();
 }
 
-function doLogout() { _supabase.auth.signOut(); location.reload(); }
+function doLogout() { 
+    if (adminWithdrawChannel) _supabase.removeChannel(adminWithdrawChannel);
+    if (adminTransferChannel) _supabase.removeChannel(adminTransferChannel);
+    _supabase.auth.signOut(); 
+    location.reload(); 
+}
 
 // ================= 3. التنقل =================
 function navTo(page) {
@@ -784,6 +792,79 @@ function showNotifications() {
         } else { Swal.fire('الإشعارات', 'لا يوجد إشعارات جديدة', 'info'); }
     });
 }
+
+// ================= 11. إشعارات المدير الفورية (Realtime for Admin) =================
+var adminAlertAudio = new Audio('convert.mp3');
+var adminWithdrawChannel = null;
+var adminTransferChannel = null;
+
+function showAdminAlert(title, message) {
+    adminAlertAudio.play().catch(function(e) { 
+        console.log("المتصفح منع تشغيل الصوت التلقائي.", e); 
+    });
+    
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'warning',
+        title: title,
+        text: message,
+        showConfirmButton: false,
+        timer: 6000,
+        timerProgressBar: true,
+        didOpen: function(toast) {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+
+    if (typeof loadNotifications === 'function') loadNotifications();
+    
+    if (document.getElementById('page-admin') && !document.getElementById('page-admin').classList.contains('hidden')) {
+        renderAdmin();
+    }
+}
+
+function startAdminRealtimeListeners() {
+    if (!userProfile || userProfile.role !== 'admin') return;
+
+    // 1. الاستماع لطلبات السحب
+    if (adminWithdrawChannel) _supabase.removeChannel(adminWithdrawChannel);
+    adminWithdrawChannel = _supabase.channel('admin-withdrawals')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'withdrawals' }, function(payload) {
+            var amount = payload.new.amount;
+            var userId = payload.new.user_id;
+            _supabase.from('profiles').select('full_name, role').eq('id', userId).maybeSingle().then(function(userRes) {
+                var roleText = 'مستخدم';
+                var nameText = 'مستخدم';
+                if (userRes.data) {
+                    nameText = userRes.data.full_name;
+                    roleText = userRes.data.role === 'provider' ? 'مزود خدمة' : (userRes.data.role === 'admin' ? 'مدير' : 'مستخدم');
+                }
+                showAdminAlert('طلب سحب جديد! 🚨', roleText + ' (' + nameText + ') يطلب سحب ' + amount + ' د.ل.');
+            });
+        })
+        .subscribe();
+
+    // 2. الاستماع لطلبات الإيداع (التحويل البنكي)
+    if (adminTransferChannel) _supabase.removeChannel(adminTransferChannel);
+    adminTransferChannel = _supabase.channel('admin-transfers')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bank_transfers' }, function(payload) {
+            var amount = payload.new.amount;
+            var userId = payload.new.user_id;
+            _supabase.from('profiles').select('full_name, role').eq('id', userId).maybeSingle().then(function(userRes) {
+                var roleText = 'مستخدم';
+                var nameText = 'مستخدم';
+                if (userRes.data) {
+                    nameText = userRes.data.full_name;
+                    roleText = userRes.data.role === 'provider' ? 'مزود خدمة' : (userRes.data.role === 'admin' ? 'مدير' : 'مستخدم');
+                }
+                showAdminAlert('طلب إيداع جديد! 💰', roleText + ' (' + nameText + ') أرسل طلب إيداع ' + amount + ' د.ل.');
+            });
+        })
+        .subscribe();
+}
+
 function checkSession() {
     _supabase.auth.getSession().then(function(res) {
         if (res.data.session) {
@@ -795,6 +876,7 @@ function checkSession() {
                         platformSettings = sRes.data || {};
                         setupUI();
                         navTo('home');
+                        if (pRes.data.role === 'admin') startAdminRealtimeListeners();
                     });
                 }
             });
@@ -802,7 +884,7 @@ function checkSession() {
     });
 }
 
-// ================= 11. التشغيل =================
+// ================= 12. التشغيل =================
 document.addEventListener('DOMContentLoaded', function() {
     var savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -852,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pageCart.parentNode.insertBefore(pagePurchases, pageCart.nextSibling);
     }
 
-    // ✅ إصلاح: جعل الشريط السفلي قابلاً للتمرير أفقياً حتى يظهر زر "مشترياتي"
+    // جعل الشريط السفلي قابلاً للتمرير أفقياً
     var navItemEl = document.querySelector('.nav-item');
     if (navItemEl && navItemEl.parentNode) {
         var navParent = navItemEl.parentNode;
@@ -870,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.head.appendChild(styleInject);
     }
 
-    // تحميل مكتبة QR (احتياطية - لا تُستخدم الآن)
+    // تحميل مكتبة QR
     if (!window.QRCode) {
         var qrScript = document.createElement('script');
         qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
