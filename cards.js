@@ -126,8 +126,8 @@ function checkoutCart() {
     isCheckingOut = true;
     Swal.fire({ title: 'جاري تنفيذ الشراء...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     
-    // استدعاء دالة الأمان الجديدة
-    _supabase.rpc('buy_whole_cart_securely').then(function(res) {
+    // ✅ التعديل: استدعاء الدالة الصحيحة purchase_cart
+    _supabase.rpc('purchase_cart', { p_user_id: currentUser.id }).then(function(res) {
       if (res.error) throw res.error;
       if (!res.data || !res.data.success) throw new Error(res.data ? res.data.message : 'فشل الشراء');
       var items = res.data.items || [];
