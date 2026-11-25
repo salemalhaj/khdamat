@@ -1,5 +1,5 @@
 // ============================================================
-// cards.js — النسخة النهائية (مع الشراء الآمن 100%)
+// cards.js — النسخة النهائية (مع الشراء الآمن 100% + إفراغ السلة)
 // ============================================================
 var cardsState = { currentCategory: null, currentCompany: null, categories: [], orderQty: 1, currentProduct: null };
 var isCheckingOut = false;
@@ -92,13 +92,31 @@ function updateCartBadge() {
   }).catch(console.warn);
 }
 
+// ✅ النسخة المُحدّثة: تصفّي العناصر اليتيمة وتحذفها تلقائياً
 function renderCart() {
   document.getElementById('page-cart').innerHTML = '<h2 style="color:var(--primary); margin-bottom:15px;"><i class="fa-solid fa-cart-shopping"></i> السلة</h2><div id="cart-body"><p>' + t('loading') + '</p></div>';
   _supabase.from('cart_items').select('*, card_products(name, price, value, company_id, stock, fulfillment_type, companies(name))').eq('user_id', currentUser.id).then(function(res) {
-    if (!res.data || !res.data.length) { document.getElementById('cart-body').innerHTML = '<div class="card" style="text-align:center; padding:40px 20px;"><i class="fa-solid fa-cart-shopping" style="font-size:48px; color:var(--text-muted); margin-bottom:15px;"></i><p>السلة فارغة</p><button class="btn btn-primary" onclick="navTo(\'cards\')" style="margin-top:15px;">تصفح المتجر</button></div>'; return; }
+    var allItems = res.data || [];
+
+    // ✅ فصل العناصر الصالحة عن اليتيمة (التي حُذف منتجها)
+    var validItems = allItems.filter(function(item) { return item.card_products != null; });
+    var orphans = allItems.filter(function(item) { return item.card_products == null; });
+
+    // ✅ حذف العناصر اليتيمة تلقائياً من قاعدة البيانات
+    if (orphans.length > 0) {
+      var orphanIds = orphans.map(function(i) { return i.id; });
+      _supabase.from('cart_items').delete().in('id', orphanIds).then(function() { updateCartBadge(); }).catch(console.warn);
+    }
+
+    // ✅ إذا لم تبقَ عناصر صالحة → أظهر "السلة فارغة"
+    if (!validItems.length) {
+      document.getElementById('cart-body').innerHTML = '<div class="card" style="text-align:center; padding:40px 20px;"><i class="fa-solid fa-cart-shopping" style="font-size:48px; color:var(--text-muted); margin-bottom:15px;"></i><p>السلة فارغة</p><button class="btn btn-primary" onclick="navTo(\'cards\')" style="margin-top:15px;">تصفح المتجر</button></div>';
+      return;
+    }
+
     var total = 0; var html = '';
-    res.data.forEach(function(item) {
-      var p = item.card_products; if (!p) return;
+    validItems.forEach(function(item) {
+      var p = item.card_products;
       var sub = Number(p.price) * item.quantity; total += sub;
       html += '<div class="card" style="padding:15px; margin-bottom:10px;"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><div><strong>' + escHtml(p.name) + '</strong><br><small style="color:var(--text-muted);">' + escHtml(p.companies ? p.companies.name : '') + '</small></div><button onclick="removeCartItem(\'' + escJs(item.id) + '\')" style="background:none; border:none; color:#e74c3c; font-size:18px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div><div style="display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="updateCartQty(\'' + escJs(item.id) + '\', -1, ' + item.quantity + ')" style="width:32px; height:32px; border-radius:50%; border:2px solid var(--primary); background:white; color:var(--primary); font-size:16px; cursor:pointer;">−</button><span style="font-weight:bold; font-size:16px; min-width:30px; text-align:center;">' + item.quantity + '</span><button onclick="updateCartQty(\'' + escJs(item.id) + '\', 1, ' + item.quantity + ', ' + (p.stock || 0) + ')" style="width:32px; height:32px; border-radius:50%; border:none; background:var(--primary); color:white; font-size:16px; cursor:pointer;">+</button></div><strong style="color:var(--accent);">' + sub.toFixed(2) + ' ' + t('currency') + '</strong></div></div>';
     });
@@ -119,18 +137,27 @@ function removeCartItem(itemId) {
   _supabase.from('cart_items').delete().eq('id', itemId).then(function() { renderCart(); updateCartBadge(); }).catch(handleError);
 }
 
+// ✅ النسخة المُحدّثة: تحذف السلة من DB بعد نجاح RPC وتعيد رسمها فارغة
 function checkoutCart() {
   if (isCheckingOut) return;
   Swal.fire({ title: 'تأكيد الشراء؟', text: 'سيتم خصم المبلغ من محفظتك.', icon: 'question', showCancelButton: true, confirmButtonText: 'نعم، اشترِ الآن', cancelButtonText: t('cancel') }).then(function(r) {
     if (!r.isConfirmed) return;
     isCheckingOut = true;
     Swal.fire({ title: 'جاري تنفيذ الشراء...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-    
-    // ✅ التعديل: استدعاء الدالة الصحيحة purchase_cart
+
     _supabase.rpc('purchase_cart', { p_user_id: currentUser.id }).then(function(res) {
       if (res.error) throw res.error;
       if (!res.data || !res.data.success) throw new Error(res.data ? res.data.message : 'فشل الشراء');
-      var items = res.data.items || [];
+
+      var rpcData = res.data;
+
+      // ✅ الحل الأساسي: احذف كل عناصر السلة بعد نجاح الشراء
+      return _supabase.from('cart_items').delete().eq('user_id', currentUser.id).then(function(delRes) {
+        if (delRes.error) console.warn('[cart clear]', delRes.error);
+        return rpcData;
+      });
+    }).then(function(data) {
+      var items = data.items || [];
       var itemsHtml = '';
       var cardIndex = 0;
       items.forEach(function(item) {
@@ -139,7 +166,7 @@ function checkoutCart() {
           codesToShow.forEach(function(code) {
             cardIndex++;
             var qrId = 'qr-' + Date.now() + '-' + cardIndex;
-            itemsHtml += 
+            itemsHtml +=
               '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 20px; margin-bottom: 15px; color: white; text-align: center; box-shadow: 0 8px 20px rgba(102,126,234,0.4);">' +
                 '<div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">' + escHtml(item.company_name) + '</div>' +
                 '<div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">' + escHtml(item.product_name) + '</div>' +
@@ -164,10 +191,7 @@ function checkoutCart() {
             setTimeout(function() {
               var el = document.getElementById(qrId);
               if (!el) return;
-              if (!code.pin) {
-                el.innerHTML = '<div style="color:#666; font-size:11px;">لا يوجد PIN</div>';
-                return;
-              }
+              if (!code.pin) { el.innerHTML = '<div style="color:#666; font-size:11px;">لا يوجد PIN</div>'; return; }
               var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=' + encodeURIComponent(code.pin);
               el.innerHTML = '<img src="' + qrUrl + '" style="width:130px; height:130px; border-radius:8px; display:block;" alt="QR Code">';
             }, 200);
@@ -176,13 +200,23 @@ function checkoutCart() {
           itemsHtml += '<div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 16px; padding: 20px; margin-bottom: 15px; text-align: center;"><i class="fa-solid fa-clock" style="font-size: 36px; color: #f59e0b; margin-bottom: 10px; display: block;"></i><div style="font-weight: bold; color: #92400e; margin-bottom: 5px; font-size: 15px;">' + escHtml(item.product_name) + '</div><div style="font-size: 12px; color: #78350f;">سيتم التسليم يدوياً من قبل الإدارة</div></div>';
         }
       });
-      Swal.fire({ 
-        title: '✅ تم الشراء بنجاح!', 
-        html: '<div style="text-align: center; padding: 10px 0; margin-bottom: 15px; background: rgba(102,126,234,0.1); border-radius: 10px;"><div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">الإجمالي المدفوع</div><div style="font-size: 22px; font-weight: bold; color: var(--accent);">' + res.data.total + ' ' + t('currency') + '</div></div><div style="max-height: 500px; overflow-y: auto; padding: 5px;">' + (itemsHtml || '<p style="text-align:center;">لا توجد عناصر</p>') + '</div>', 
-        confirmButtonText: 'حسناً', width: 500 
+      Swal.fire({
+        title: '✅ تم الشراء بنجاح!',
+        html: '<div style="text-align: center; padding: 10px 0; margin-bottom: 15px; background: rgba(102,126,234,0.1); border-radius: 10px;"><div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">الإجمالي المدفوع</div><div style="font-size: 22px; font-weight: bold; color: var(--accent);">' + data.total + ' ' + t('currency') + '</div></div><div style="max-height: 500px; overflow-y: auto; padding: 5px;">' + (itemsHtml || '<p style="text-align:center;">لا توجد عناصر</p>') + '</div>',
+        confirmButtonText: 'حسناً', width: 500
       });
-      updateCartBadge(); isCheckingOut = false;
-    }).catch(function(err) { isCheckingOut = false; handleError(err); });
+      updateCartBadge();
+      isCheckingOut = false;
+
+      // ✅ الحل الأساسي 2: أعد رسم صفحة السلة فوراً لتظهر فارغة
+      var cartPage = document.getElementById('page-cart');
+      if (cartPage && !cartPage.classList.contains('hidden')) {
+        renderCart();
+      }
+    }).catch(function(err) {
+      isCheckingOut = false;
+      handleError(err);
+    });
   });
 }
 
@@ -203,7 +237,7 @@ function renderMyPurchases() {
   var container = document.getElementById('page-my-purchases');
   if (!container) return;
   container.innerHTML = '<h2 style="color:var(--primary); margin-bottom:15px;"><i class="fa-solid fa-receipt"></i> مشترياتي</h2><div id="purchases-body"><p>' + t('loading') + '</p></div>';
-  
+
   _supabase.from('card_orders')
     .select('*, card_order_items(*), digital_codes(*)')
     .eq('user_id', currentUser.id)
@@ -221,7 +255,7 @@ function renderMyPurchases() {
         var itemsHtml = (order.card_order_items || []).map(function(i) {
           return '<li style="margin-bottom:5px;">' + escHtml(i.product_name) + ' × ' + i.quantity + ' = ' + i.subtotal + ' ' + t('currency') + '</li>';
         }).join('');
-        
+
         var codesHtml = '';
         if (order.digital_codes && order.digital_codes.length > 0) {
           codesHtml = '<div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><strong style="font-size:12px; color:var(--primary);">الأكواد:</strong>';
@@ -253,7 +287,7 @@ function renderMyPurchases() {
           });
           codesHtml += '</div>';
         }
-        
+
         html += '<div class="card" style="padding:15px; margin-bottom:12px;">' +
                 '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">' +
                   '<div><div style="font-size:11px; color:var(--text-muted);">طلب #' + String(order.id).substring(0, 8) + '</div>' +
