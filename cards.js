@@ -1,5 +1,5 @@
 // ============================================================
-// cards.js — النسخة النهائية (مع إصلاح QR 100%)
+// cards.js — النسخة النهائية (مع الشراء الآمن 100%)
 // ============================================================
 var cardsState = { currentCategory: null, currentCompany: null, categories: [], orderQty: 1, currentProduct: null };
 var isCheckingOut = false;
@@ -121,11 +121,13 @@ function removeCartItem(itemId) {
 
 function checkoutCart() {
   if (isCheckingOut) return;
-  Swal.fire({ title: 'تأكيد الشراء؟', text: 'سيتم خصم المبلغ من محفظتك وتحويله للمدير.', icon: 'question', showCancelButton: true, confirmButtonText: 'نعم، اشترِ الآن', cancelButtonText: t('cancel') }).then(function(r) {
+  Swal.fire({ title: 'تأكيد الشراء؟', text: 'سيتم خصم المبلغ من محفظتك.', icon: 'question', showCancelButton: true, confirmButtonText: 'نعم، اشترِ الآن', cancelButtonText: t('cancel') }).then(function(r) {
     if (!r.isConfirmed) return;
     isCheckingOut = true;
     Swal.fire({ title: 'جاري تنفيذ الشراء...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-    _supabase.rpc('purchase_cart', { p_user_id: currentUser.id }).then(function(res) {
+    
+    // استدعاء دالة الأمان الجديدة
+    _supabase.rpc('buy_whole_cart_securely').then(function(res) {
       if (res.error) throw res.error;
       if (!res.data || !res.data.success) throw new Error(res.data ? res.data.message : 'فشل الشراء');
       var items = res.data.items || [];
@@ -159,7 +161,6 @@ function checkoutCart() {
                   '<div style="background: white; border-radius: 8px; padding: 10px; margin-top: 10px; display: inline-block;"><div id="' + qrId + '"><div style="color:#666; font-size:10px;">جاري تكوين QR...</div></div></div>' +
                 '</div>' +
               '</div>';
-            // ✅ إصلاح QR: استخدام api.qrserver.com بدلاً من المكتبة
             setTimeout(function() {
               var el = document.getElementById(qrId);
               if (!el) return;
