@@ -2188,29 +2188,22 @@ function loadAdminDevices() {
     if (!box) return;
     box.innerHTML = '<p>' + t('loading') + '</p>';
     
-    console.log("1️⃣ جاري محاولة جلب الأجهزة من جدول registered_devices...");
-
     // جلب الأجهزة
     _supabase.from('registered_devices').select('*').order('created_at', { ascending: false }).then(function(res) {
-        console.log("2️⃣ رد قاعدة البيانات (الأجهزة):", res);
-
         if (res.error) { 
-            box.innerHTML = '<p style="color:red;">خطأ من قاعدة البيانات: ' + escHtml(res.error.message) + '</p>'; 
+            box.innerHTML = '<p style="color:red;">حدث خطأ: ' + escHtml(res.error.message) + '</p>'; 
             return; 
         }
         
         if (!res.data || res.data.length === 0) { 
-            box.innerHTML = '<div class="card"><p style="text-align:center;">قاعدة البيانات أعادت قائمة فارغة. (إما لا توجد أجهزة، أو صلاحيات القراءة ممنوعة).</p></div>'; 
+            box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد أجهزة مسجلة حتى الآن.</p></div>'; 
             return; 
         }
         
         var userIds = res.data.map(function(d) { return d.user_id; }).filter(function(id) { return id; });
-        console.log("3️⃣ معرفات المستخدمين المرتبطين بالأجهزة:", userIds);
         
         // جلب بيانات المستخدمين
         _supabase.from('profiles').select('id, full_name, email, phone, role').in('id', userIds).then(function(pRes) {
-            console.log("4️⃣ رد قاعدة البيانات (المستخدمين):", pRes);
-
             var profilesMap = {};
             if (pRes.data) pRes.data.forEach(function(p) { profilesMap[p.id] = p; });
             
@@ -2236,7 +2229,6 @@ function loadAdminDevices() {
             });
             html += '</tbody></table></div></div>';
             box.innerHTML = html;
-            console.log("5️⃣ تم عرض الأجهزة بنجاح في الصفحة.");
         });
     }).catch(handleError);
 }
