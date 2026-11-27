@@ -1913,14 +1913,21 @@ function renderPaymentRequestBubble(m) {
     var note = data.note || '';
     var requestId = data.request_id || '';
     var status = data.status || 'pending';
+    var isReleased = data.is_released || false; // الحالة الجديدة
+
     var statusBadge = '';
-    if (status === 'paid') statusBadge = '<span style="background:#27ae60; padding:4px 10px; border-radius:10px; font-size:11px;">✅ مدفوع</span>';
+    if (status === 'paid' && !isReleased) statusBadge = '<span style="background:#f39c12; padding:4px 10px; border-radius:10px; font-size:11px;">🔒 محجوز لدى الإدارة</span>';
+    else if (status === 'paid' && isReleased) statusBadge = '<span style="background:#27ae60; padding:4px 10px; border-radius:10px; font-size:11px;">✅ تم تحرير المبلغ للمزود</span>';
     else if (status === 'rejected') statusBadge = '<span style="background:#e74c3c; padding:4px 10px; border-radius:10px; font-size:11px;">❌ مرفوض</span>';
-    else if (status === 'expired') statusBadge = '<span style="background:#95a5a6; padding:4px 10px; border-radius:10px; font-size:11px;">⏰ منتهي</span>';
-    else statusBadge = '<span style="background:#f39c12; padding:4px 10px; border-radius:10px; font-size:11px;">⏳ ينتظر</span>';
+    else statusBadge = '<span style="background:#f39c12; padding:4px 10px; border-radius:10px; font-size:11px;">⏳ ينتظر الدفع</span>';
 
     var actionsHtml = '';
-    if (!isMe && status === 'pending') {
+    // إذا كان المستخدم هو الدافع، والمبلغ مدفوع ولم يتم تحريره بعد -> يظهر زر التحرير
+    if (isMe && status === 'paid' && !isReleased) {
+        actionsHtml = '<div class="pr-actions" style="margin-top:10px;">' +
+            '<button class="accept" style="background:#27ae60;" onclick="releaseFunds(\'' + escJs(requestId) + '\')">🔓 موافق، حرر المبلغ للمزود</button>' +
+            '</div>';
+    } else if (!isMe && status === 'pending') {
         actionsHtml = '<div class="pr-actions">' +
             '<button class="accept" onclick="payPaymentRequest(\'' + escJs(requestId) + '\')">💳 ' + t('pay_now') + '</button>' +
             '<button class="reject" onclick="rejectPaymentRequest(\'' + escJs(requestId) + '\')">' + t('reject_offer') + '</button>' +
@@ -1969,47 +1976,59 @@ function payFromWallet(requestId) {
 }
 
 function payViaPhone(requestId) {
-    _supabase.from('payment_requests').select('*, profiles!payment_requests_provider_id_fkey(full_name, phone)').eq('id', requestId).maybeSingle().then(function(r) {
-        if (!r.data || !r.data.profiles) return Swal.fire('خطأ', 'تعذر جلب بيانات المزود', 'error');
-        var providerName = r.data.profiles.full_name;
-        var providerPhone = r.data.profiles.phone;
+    // جلب طلب الدفع أولاً
+    _supabase.from('payment_requests').select('*').eq('id', requestId).maybeSingle().then(function(r) {
+        if (!r.data) return Swal.fire('خطأ', 'الطلب غير موجود', 'error');
+        
+        var providerId = r.data.provider_id;
         var amount = r.data.amount;
-        Swal.fire({
-            title: '💸 تحويل بالهاتف',
-            html: '<div style="text-align:right; line-height:1.9; font-size:14px;">' +
-                '<p>حوّل المبلغ إلى:</p>' +
-                '<div style="background:#e8f5e9; padding:12px; border-radius:10px; margin:10px 0;">' +
-                '<div><b>👤 الاسم:</b> ' + escHtml(providerName) + '</div>' +
-                '<div><b>📱 الهاتف:</b> <span dir="ltr" style="font-family:monospace; font-weight:bold;">' + escHtml(providerPhone) + '</span></div>' +
-                '<div><b>💰 المبلغ:</b> ' + amount + ' ' + t('currency') + '</div>' +
-                '</div>' +
-                '<p>بعد التحويل، ارفع صورة إشعار التحويل:</p>' +
-                '<input type="file" id="phone-receipt" accept="image/*" class="swal2-file" style="font-size:13px;">' +
-                '</div>',
-            confirmButtonText: '✅ تم التحويل',
-            cancelButtonText: t('cancel'),
-            showCancelButton: true,
-            preConfirm: function() {
-                var file = document.getElementById('phone-receipt').files[0];
-                if (!file) { Swal.showValidationMessage('ارفع صورة إشعار التحويل'); return false; }
-                return file;
-            }
-        }).then(function(res) {
-            if (!res.isConfirmed) return;
-            var file = res.value;
-            Swal.fire({ title: t('uploading'), didOpen: function() { Swal.showLoading(); } });
-            var fileName = 'receipt_' + currentUser.id + '_' + Date.now() + '.' + file.name.split('.').pop();
-            _supabase.storage.from('payment-receipts').upload(fileName, file).then(function(up) {
-                if (up.error) return Swal.fire('خطأ', up.error.message, 'error');
-                var url = _supabase.storage.from('payment-receipts').getPublicUrl(fileName).data.publicUrl;
-                _supabase.rpc('mark_payment_paid_via_transfer', { p_request_id: requestId, p_receipt_url: url }).then(function(res2) {
-                    if (res2.error) return Swal.fire('خطأ', res2.error.message, 'error');
-                    Swal.fire('✅ تم', 'تم إرسال إشعار التحويل. في انتظار تأكيد المزود.', 'success');
-                    loadChatMessages();
-                });
-            }).catch(handleError);
+
+        // جلب بيانات المزود بشكل منفصل
+        _supabase.from('profiles').select('full_name, phone').eq('id', providerId).maybeSingle().then(function(pRes) {
+            if (!pRes.data) return Swal.fire('خطأ', 'تعذر جلب بيانات المزود', 'error');
+            
+            var providerName = pRes.data.full_name;
+            var providerPhone = pRes.data.phone;
+
+            Swal.fire({
+                title: '💸 تحويل بالهاتف',
+                html: '<div style="text-align:right; line-height:1.9; font-size:14px;">' +
+                    '<p>حوّل المبلغ إلى:</p>' +
+                    '<div style="background:#e8f5e9; padding:12px; border-radius:10px; margin:10px 0;">' +
+                    '<div><b>👤 الاسم:</b> ' + escHtml(providerName) + '</div>' +
+                    '<div><b>📱 الهاتف:</b> <span dir="ltr" style="font-family:monospace; font-weight:bold;">' + escHtml(providerPhone) + '</span></div>' +
+                    '<div><b>💰 المبلغ:</b> ' + amount + ' ' + t('currency') + '</div>' +
+                    '</div>' +
+                    '<p>بعد التحويل، ارفع صورة إشعار التحويل:</p>' +
+                    '<input type="file" id="phone-receipt" accept="image/*" class="swal2-file" style="font-size:13px;">' +
+                    '</div>',
+                confirmButtonText: '✅ تم التحويل',
+                cancelButtonText: t('cancel'),
+                showCancelButton: true,
+                preConfirm: function() {
+                    var file = document.getElementById('phone-receipt').files[0];
+                    if (!file) { Swal.showValidationMessage('ارفع صورة إشعار التحويل'); return false; }
+                    return file;
+                }
+            }).then(function(res) {
+                if (!res.isConfirmed) return;
+                var file = res.value;
+                Swal.fire({ title: t('uploading'), didOpen: function() { Swal.showLoading(); } });
+                var fileName = 'receipt_' + currentUser.id + '_' + Date.now() + '.' + file.name.split('.').pop();
+                
+                _supabase.storage.from('payment-receipts').upload(fileName, file).then(function(up) {
+                    if (up.error) return Swal.fire('خطأ', up.error.message, 'error');
+                    var url = _supabase.storage.from('payment-receipts').getPublicUrl(fileName).data.publicUrl;
+                    
+                    _supabase.rpc('mark_payment_paid_via_transfer', { p_request_id: requestId, p_receipt_url: url }).then(function(res2) {
+                        if (res2.error) return Swal.fire('خطأ', res2.error.message, 'error');
+                        Swal.fire('✅ تم', 'تم إرسال إشعار التحويل. في انتظار تأكيد المزود.', 'success');
+                        loadChatMessages();
+                    });
+                }).catch(handleError);
+            });
         });
-    });
+    }).catch(handleError);
 }
 
 function rejectPaymentRequest(requestId) {
@@ -2120,6 +2139,7 @@ function renderAdmin() {
                                 c += '<div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div>';
                                 c += '<div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div>';
                                 c += '<div class="tab" onclick="adminTab(this, \'a-offers\')">💸 عروض (' + prCount + ')</div>';
+                                c += '<div class="tab" onclick="adminTab(this, \'a-escrow\')">🔒 المبالغ المحجوزة</div>'; // التبويب الجديد
                                 c += '<div class="tab" onclick="adminTab(this, \'a-devices\')">📱 الأجهزة</div>';
                                 c += '<div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div>';
                                 c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
@@ -2143,6 +2163,7 @@ function renderAdmin() {
                                 if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
                                 c += '</div>';
                                 c += '<div id="a-offers" class="hidden"></div>';
+                                c += '<div id="a-escrow" class="hidden"></div>'; // حاوية التبويب الجديد
                                 c += '<div id="a-devices" class="hidden"></div>';
                                 c += '<div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
                                 c += '<div id="a-users" class="hidden"></div>';
@@ -2163,21 +2184,69 @@ function adminTab(el, id) {
     var tabs = el.parentElement.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
     el.classList.add('active');
-    var contents = ['a-serv', 'a-with', 'a-trans', 'a-offers', 'a-devices', 'a-cards', 'a-users', 'a-ads', 'a-settings', 'a-store'];
+    
+    // أضفنا a-escrow إلى القائمة
+    var contents = ['a-serv', 'a-with', 'a-trans', 'a-offers', 'a-escrow', 'a-devices', 'a-cards', 'a-users', 'a-ads', 'a-settings', 'a-store'];
     for (var j = 0; j < contents.length; j++) {
         var e = document.getElementById(contents[j]);
         if (e) e.classList.add('hidden');
     }
     var active = document.getElementById(id);
     if (active) active.classList.remove('hidden');
+    
     if (id === 'a-with') loadAdminWithdrawals();
     if (id === 'a-offers') loadAdminPendingOffers();
+    if (id === 'a-escrow') loadAdminEscrow(); // استدعاء الدالة الجديدة
     if (id === 'a-devices') loadAdminDevices();
     if (id === 'a-cards') loadAdminCardsList();
     if (id === 'a-users') loadUsersList();
     if (id === 'a-ads') loadAdminAds();
     if (id === 'a-settings') loadAdminSettings();
     if (id === 'a-store') loadAdminStore();
+}
+
+function loadAdminEscrow() {
+    var box = document.getElementById('a-escrow');
+    if (!box) return;
+    box.innerHTML = '<p>' + t('loading') + '</p>';
+    
+    // جلب طلبات الدفع المدفوعة وغير المحررة
+    _supabase.from('payment_requests').select('*')
+        .eq('status', 'paid')
+        .eq('is_released', false)
+        .order('created_at', { ascending: false })
+        .then(function(res) {
+            if (res.error) { box.innerHTML = '<p style="color:red;">' + escHtml(res.error.message) + '</p>'; return; }
+            if (!res.data || !res.data.length) { box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد مبالغ محجوزة حالياً.</p></div>'; return; }
+            
+            var userIds = [];
+            res.data.forEach(function(pr) {
+                if (pr.client_id) userIds.push(pr.client_id);
+                if (pr.provider_id) userIds.push(pr.provider_id);
+            });
+            
+            _supabase.from('profiles').select('id, full_name').in('id', userIds).then(function(pRes) {
+                var names = {};
+                if (pRes.data) pRes.data.forEach(function(p) { names[p.id] = p.full_name; });
+                
+                var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">🔒 المبالغ المحجوزة (' + res.data.length + ')</h4><div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px; text-align:right;">';
+                html += '<tr style="background:#eee; border-bottom:2px solid #ccc;"><th style="padding:8px;">التاريخ</th><th style="padding:8px;">المبلغ</th><th style="padding:8px;">العميل (الدافع)</th><th style="padding:8px;">المزود (المستفيد)</th><th style="padding:8px;">الحالة</th></tr>';
+                
+                res.data.forEach(function(pr) {
+                    var created = new Date(pr.created_at).toLocaleDateString('ar-EG');
+                    html += '<tr style="border-bottom:1px solid #ddd;">';
+                    html += '<td style="padding:8px;">' + created + '</td>';
+                    html += '<td style="padding:8px; font-weight:bold; color:var(--primary);">' + pr.amount + ' د.ل</td>';
+                    html += '<td style="padding:8px;">' + escHtml(names[pr.client_id] || 'غير معروف') + '</td>';
+                    html += '<td style="padding:8px;">' + escHtml(names[pr.provider_id] || 'غير معروف') + '</td>';
+                    html += '<td style="padding:8px; color:#f39c12; font-weight:bold;">🔒 محجوز</td>';
+                    html += '</tr>';
+                });
+                
+                html += '</table></div></div>';
+                box.innerHTML = html;
+            });
+        }).catch(handleError);
 }
 
 function approveService(id) {
@@ -2964,3 +3033,34 @@ document.addEventListener('DOMContentLoaded', function() {
     var btnNotif = document.getElementById('btn-notifications');
     if (btnNotif) btnNotif.addEventListener('click', showNotifications);
 });
+
+function releaseFunds(requestId) {
+    Swal.fire({
+        title: 'تحرير المبلغ؟',
+        text: 'هل أنت متأكد من إتمام الخدمة وموافقتك على تحويل المبلغ للمزود؟ (لا يمكن التراجع)',
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: 'نعم، حرر المبلغ', cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#27ae60'
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+        Swal.fire({ title: 'جاري التحرير...', didOpen: function() { Swal.showLoading(); } });
+        
+        _supabase.rpc('release_funds_to_provider', { p_request_id: requestId }).then(function(res) {
+            if (res.error || !res.data || !res.data.success) {
+                return Swal.fire('خطأ', res.error ? res.error.message : (res.data ? res.data.message : 'فشل التحرير'), 'error');
+            }
+            
+            // إرسال رسالة نصية في الشات لإعلام المزود
+            var textMsg = "✅ تم تحرير المبلغ من قبل العميل وتحويله إلى محفظتك. شكراً لك!";
+            _supabase.from('messages').insert([{
+                sender_id: currentUser.id,
+                receiver_id: currentChatUserId,
+                message: textMsg,
+                message_type: 'text'
+            }]).then(function() {
+                Swal.fire('تم', 'تم تحرير المبلغ للمزود بنجاح', 'success');
+                loadChatMessages(); // تحديث الشات
+            });
+        }).catch(handleError);
+    });
+}
