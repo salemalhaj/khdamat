@@ -2187,29 +2187,40 @@ function loadAdminDevices() {
     var box = document.getElementById('a-devices');
     if (!box) return;
     box.innerHTML = '<p>' + t('loading') + '</p>';
-    _supabase.from('registered_devices').select('*, profiles(full_name, email, phone, role)').order('created_at', { ascending: false }).then(function(res) {
+    
+    // جلب الأجهزة أولاً بدون ربطها بجدول المستخدمين
+    _supabase.from('registered_devices').select('*').order('created_at', { ascending: false }).then(function(res) {
         if (res.error) { box.innerHTML = '<p style="color:red;">' + escHtml(res.error.message) + '</p>'; return; }
         if (!res.data || !res.data.length) { box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد أجهزة مسجلة.</p></div>'; return; }
-        var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">📱 الأجهزة المسجلة (' + res.data.length + ')</h4><div style="overflow-x:auto;"><table class="devices-table"><thead><tr><th>المستخدم</th><th>البريد</th><th>التاريخ</th><th>IP</th><th>البصمة</th><th>إجراء</th></tr></thead><tbody>';
-        res.data.forEach(function(dev) {
-            var p = dev.profiles || {};
-            var created = new Date(dev.created_at).toLocaleDateString('ar-EG');
-            var relTime = getRelativeTime(dev.created_at);
-            var fp = dev.device_fingerprint || '';
-            var fpShort = fp.length > 16 ? fp.substring(0, 16) + '...' : fp;
-            var browserInfo = dev.browser_info || {};
-            var browserTxt = browserInfo.browser ? (browserInfo.browser + ' / ' + (browserInfo.os || '')) : '-';
-            html += '<tr>';
-            html += '<td><b>' + escHtml(p.full_name || '-') + '</b><br><small style="color:#888;">' + (p.role === 'provider' ? 'مزود' : p.role === 'admin' ? 'مدير' : 'مستخدم') + '</small></td>';
-            html += '<td><span dir="ltr" style="font-size:10px;">' + escHtml(dev.email || p.email || '-') + '</span></td>';
-            html += '<td><div style="font-size:11px;">' + created + '</div><div style="font-size:10px; color:#27ae60;">' + relTime + '</div></td>';
-            html += '<td><span dir="ltr" style="font-family:monospace; font-size:10px;">' + escHtml(dev.ip_address || '-') + '</span></td>';
-            html += '<td><div class="fp-code" title="' + escHtml(fp) + '">' + escHtml(fpShort) + '</div><div style="font-size:10px; color:#666;">' + escHtml(browserTxt) + '</div></td>';
-            html += '<td><button class="btn btn-danger btn-sm" style="margin:0; padding:6px 10px; font-size:11px;" onclick="deleteDeviceFingerprint(\'' + escJs(dev.id) + '\', \'' + escJs(p.full_name || '') + '\')" title="حذف البصمة"><i class="fa-solid fa-trash"></i></button></td>';
-            html += '</tr>';
+        
+        // استخراج معرفات المستخدمين لجلب أسمائهم
+        var userIds = res.data.map(function(d) { return d.user_id; }).filter(function(id) { return id; });
+        
+        _supabase.from('profiles').select('id, full_name, email, phone, role').in('id', userIds).then(function(pRes) {
+            var profilesMap = {};
+            if (pRes.data) pRes.data.forEach(function(p) { profilesMap[p.id] = p; });
+            
+            var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">📱 الأجهزة المسجلة (' + res.data.length + ')</h4><div style="overflow-x:auto;"><table class="devices-table"><thead><tr><th>المستخدم</th><th>البريد</th><th>التاريخ</th><th>IP</th><th>البصمة</th><th>إجراء</th></tr></thead><tbody>';
+            res.data.forEach(function(dev) {
+                var p = profilesMap[dev.user_id] || {}; // ربط بيانات المستخدم يدوياً
+                var created = new Date(dev.created_at).toLocaleDateString('ar-EG');
+                var relTime = getRelativeTime(dev.created_at);
+                var fp = dev.device_fingerprint || '';
+                var fpShort = fp.length > 16 ? fp.substring(0, 16) + '...' : fp;
+                var browserInfo = dev.browser_info || {};
+                var browserTxt = browserInfo.browser ? (browserInfo.browser + ' / ' + (browserInfo.os || '')) : '-';
+                html += '<tr>';
+                html += '<td><b>' + escHtml(p.full_name || '-') + '</b><br><small style="color:#888;">' + (p.role === 'provider' ? 'مزود' : p.role === 'admin' ? 'مدير' : 'مستخدم') + '</small></td>';
+                html += '<td><span dir="ltr" style="font-size:10px;">' + escHtml(dev.email || p.email || '-') + '</span></td>';
+                html += '<td><div style="font-size:11px;">' + created + '</div><div style="font-size:10px; color:#27ae60;">' + relTime + '</div></td>';
+                html += '<td><span dir="ltr" style="font-family:monospace; font-size:10px;">' + escHtml(dev.ip_address || '-') + '</span></td>';
+                html += '<td><div class="fp-code" title="' + escHtml(fp) + '">' + escHtml(fpShort) + '</div><div style="font-size:10px; color:#666;">' + escHtml(browserTxt) + '</div></td>';
+                html += '<td><button class="btn btn-danger btn-sm" style="margin:0; padding:6px 10px; font-size:11px;" onclick="deleteDeviceFingerprint(\'' + escJs(dev.id) + '\', \'' + escJs(p.full_name || '') + '\')" title="حذف البصمة"><i class="fa-solid fa-trash"></i></button></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div></div>';
+            box.innerHTML = html;
         });
-        html += '</tbody></table></div></div>';
-        box.innerHTML = html;
     }).catch(handleError);
 }
 
@@ -2235,40 +2246,58 @@ function loadAdminPendingOffers() {
     var box = document.getElementById('a-offers');
     if (!box) return;
     box.innerHTML = '<p>' + t('loading') + '</p>';
-    _supabase.from('payment_requests').select('*, profiles!payment_requests_provider_id_fkey(full_name, phone), client:profiles!payment_requests_client_id_fkey(full_name, phone)').in('status', ['pending', 'paid']).order('created_at', { ascending: false }).limit(50).then(function(res) {
+    
+    // جلب العروض أولاً
+    _supabase.from('payment_requests').select('*').in('status', ['pending', 'paid']).order('created_at', { ascending: false }).limit(50).then(function(res) {
         if (res.error) { box.innerHTML = '<p style="color:red;">' + escHtml(res.error.message) + '</p>'; return; }
         if (!res.data || !res.data.length) { box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد عروض.</p></div>'; return; }
-        var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">💸 عروض الأسعار (' + res.data.length + ')</h4>';
+        
+        // استخراج معرفات العملاء والمزودين
+        var userIds = [];
         res.data.forEach(function(pr) {
-            var provider = pr.profiles || {};
-            var client = pr.client || {};
-            var statusColor = pr.status === 'paid' ? '#27ae60' : '#f39c12';
-            var statusText = pr.status === 'paid' ? '✅ مدفوع' : '⏳ معلق';
-            var paymentMethod = pr.payment_method === 'wallet' ? '💳 محفظة' : pr.payment_method === 'phone_transfer' ? '📱 تحويل هاتف' : '-';
-            var created = new Date(pr.created_at).toLocaleDateString('ar-EG');
-            var relTime = getRelativeTime(pr.created_at);
-            var expiresLeft = Math.max(0, Math.floor((new Date(pr.expires_at) - Date.now()) / 3600000));
-            html += '<div style="border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:10px; border-right:4px solid ' + statusColor + ';">' +
-                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
-                    '<span style="background:' + statusColor + '; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:bold;">' + statusText + '</span>' +
-                    '<strong style="color:var(--accent); font-size:18px;">' + escHtml(pr.amount) + ' ' + t('currency') + '</strong>' +
-                '</div>' +
-                '<div style="font-size:12px; line-height:1.8;">' +
-                    '<div>👤 <b>المزود:</b> ' + escHtml(provider.full_name || '-') + ' <span dir="ltr">(' + escHtml(provider.phone || '-') + ')</span></div>' +
-                    '<div>👤 <b>العميل:</b> ' + escHtml(client.full_name || '-') + ' <span dir="ltr">(' + escHtml(client.phone || '-') + ')</span></div>' +
-                    '<div>💳 <b>طريقة الدفع:</b> ' + paymentMethod + '</div>' +
-                    '<div>📝 <b>النوع:</b> ' + (pr.payment_type === 'deposit' ? 'عربون' : 'كامل المبلغ') + '</div>' +
-                    (pr.note ? '<div>💬 <b>ملاحظة:</b> ' + escHtml(pr.note) + '</div>' : '') +
-                    '<div style="color:#666; font-size:11px; margin-top:5px;">📅 ' + created + ' - ' + relTime + '</div>' +
-                    (pr.status === 'pending' ? '<div style="color:#f39c12; font-size:11px;">⏳ ينتهي خلال ' + expiresLeft + ' ساعة</div>' : '') +
-                '</div>';
-            if (pr.receipt_url) {
-                html += '<a href="' + escHtml(pr.receipt_url) + '" target="_blank" style="color:var(--accent); font-size:12px; display:block; margin-top:8px;"><i class="fa-solid fa-image"></i> عرض إشعار التحويل</a>';
-            }
-            html += '</div>';
+            if (pr.client_id) userIds.push(pr.client_id);
+            if (pr.provider_id) userIds.push(pr.provider_id);
         });
-        html += '</div>';
-        box.innerHTML = html;
+        userIds = [...new Set(userIds)]; // إزالة التكرار
+        
+        // جلب بيانات المستخدمين يدوياً
+        _supabase.from('profiles').select('id, full_name, phone').in('id', userIds).then(function(pRes) {
+            var profilesMap = {};
+            if (pRes.data) pRes.data.forEach(function(p) { profilesMap[p.id] = p; });
+            
+            var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">💸 عروض الأسعار (' + res.data.length + ')</h4>';
+            res.data.forEach(function(pr) {
+                var provider = profilesMap[pr.provider_id] || {}; // ربط المزود
+                var client = profilesMap[pr.client_id] || {};     // ربط العميل
+                
+                var statusColor = pr.status === 'paid' ? '#27ae60' : '#f39c12';
+                var statusText = pr.status === 'paid' ? '✅ مدفوع' : '⏳ معلق';
+                var paymentMethod = pr.payment_method === 'wallet' ? '💳 محفظة' : pr.payment_method === 'phone_transfer' ? '📱 تحويل هاتف' : '-';
+                var created = new Date(pr.created_at).toLocaleDateString('ar-EG');
+                var relTime = getRelativeTime(pr.created_at);
+                var expiresLeft = Math.max(0, Math.floor((new Date(pr.expires_at) - Date.now()) / 3600000));
+                html += '<div style="border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:10px; border-right:4px solid ' + statusColor + ';">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+                        '<span style="background:' + statusColor + '; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:bold;">' + statusText + '</span>' +
+                        '<strong style="color:var(--accent); font-size:18px;">' + escHtml(pr.amount) + ' ' + t('currency') + '</strong>' +
+                    '</div>' +
+                    '<div style="font-size:12px; line-height:1.8;">' +
+                        '<div>👤 <b>المزود:</b> ' + escHtml(provider.full_name || '-') + ' <span dir="ltr">(' + escHtml(provider.phone || '-') + ')</span></div>' +
+                        '<div>👤 <b>العميل:</b> ' + escHtml(client.full_name || '-') + ' <span dir="ltr">(' + escHtml(client.phone || '-') + ')</span></div>' +
+                        '<div>💳 <b>طريقة الدفع:</b> ' + paymentMethod + '</div>' +
+                        '<div>📝 <b>النوع:</b> ' + (pr.payment_type === 'deposit' ? 'عربون' : 'كامل المبلغ') + '</div>' +
+                        (pr.note ? '<div>💬 <b>ملاحظة:</b> ' + escHtml(pr.note) + '</div>' : '') +
+                        '<div style="color:#666; font-size:11px; margin-top:5px;">📅 ' + created + ' - ' + relTime + '</div>' +
+                        (pr.status === 'pending' ? '<div style="color:#f39c12; font-size:11px;">⏳ ينتهي خلال ' + expiresLeft + ' ساعة</div>' : '') +
+                    '</div>';
+                if (pr.receipt_url) {
+                    html += '<a href="' + escHtml(pr.receipt_url) + '" target="_blank" style="color:var(--accent); font-size:12px; display:block; margin-top:8px;"><i class="fa-solid fa-image"></i> عرض إشعار التحويل</a>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            box.innerHTML = html;
+        });
     }).catch(handleError);
 }
 
