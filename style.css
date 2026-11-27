@@ -33,11 +33,13 @@
 body { 
     background: var(--bg); 
     color: var(--text); 
-    padding-bottom: 110px; /* زيادة المساحة بسبب الشريط العائم */
+    padding-bottom: 110px;
     transition: background 0.3s, color 0.3s; 
 }
 
-/* الشريط العلوي */
+/* ============================================================
+   الشريط العلوي
+   ============================================================ */
 .header { 
     background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
     color: white; 
@@ -71,7 +73,9 @@ body {
 }
 .theme-toggle:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
 
-/* الشريط السفلي العائم */
+/* ============================================================
+   الشريط السفلي العائم
+   ============================================================ */
 .bottom-nav { 
     position: fixed; 
     bottom: 15px; 
@@ -85,7 +89,10 @@ body {
     z-index: 100; 
     border-radius: 30px; 
     border: 1px solid var(--border);
+    overflow-x: auto;
+    gap: 2px;
 }
+.bottom-nav::-webkit-scrollbar { display: none; }
 
 .nav-item { 
     display: flex; 
@@ -97,8 +104,10 @@ body {
     gap: 4px; 
     font-weight: 600; 
     transition: 0.3s;
-    padding: 5px 10px;
+    padding: 5px 8px;
     border-radius: 15px;
+    min-width: 55px;
+    flex-shrink: 0;
 }
 
 .nav-item.active { 
@@ -109,10 +118,13 @@ body {
     background: rgba(58, 169, 53, 0.15);
 }
 
-.nav-item i { font-size: 22px; transition: 0.3s; }
+.nav-item i { font-size: 20px; transition: 0.3s; }
 .nav-item.active i { transform: translateY(-2px); }
+.nav-item span { font-size: 10px; white-space: nowrap; }
 
-/* الحاويات والبطاقات */
+/* ============================================================
+   الحاويات والبطاقات
+   ============================================================ */
 .container { padding: 20px 15px; max-width: 600px; margin: auto; }
 .card { 
     background: var(--card-bg); 
@@ -124,7 +136,9 @@ body {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-/* حقول الإدخال */
+/* ============================================================
+   حقول الإدخال
+   ============================================================ */
 input, select, textarea { 
     width: 100%; 
     padding: 14px 16px; 
@@ -144,7 +158,9 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 0 0 4px rgba(58, 169, 53, 0.1);
 }
 
-/* الأزرار */
+/* ============================================================
+   الأزرار
+   ============================================================ */
 .btn { 
     display: flex; 
     justify-content: center; 
@@ -179,7 +195,9 @@ input:focus, select:focus, textarea:focus {
 .btn:active { transform: scale(0.96); }
 .btn-sm { padding: 8px 16px; font-size: 13px; width: auto; border-radius: 12px; }
 
-/* التبويبات */
+/* ============================================================
+   التبويبات
+   ============================================================ */
 .tabs { 
     display: flex; 
     margin-bottom: 20px; 
@@ -189,6 +207,7 @@ input:focus, select:focus, textarea:focus {
     border: 1px solid var(--border);
     overflow-x: auto; 
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tab { 
     padding: 10px 20px; 
     cursor: pointer; 
@@ -250,7 +269,9 @@ input:focus, select:focus, textarea:focus {
     padding: 2px; 
 }
 
-/* سلايدر الإعلانات */
+/* ============================================================
+   سلايدر الإعلانات
+   ============================================================ */
 .ad-slider { 
     position: relative; 
     width: 100%; 
@@ -258,7 +279,7 @@ input:focus, select:focus, textarea:focus {
     overflow: hidden; 
     margin-bottom: 15px; 
     touch-action: pan-y; 
-    background: transparent; /* الخلفية شفافة ليظهر لون الموقع */
+    background: transparent;
 }
 
 .ad-slide { 
@@ -285,7 +306,486 @@ input:focus, select:focus, textarea:focus {
     width: 100%; 
     height: 100%; 
     object-fit: cover; 
-    border-radius: 16px; /* نقل الزوايا الدائرية للصورة */
-    box-shadow: var(--shadow); /* نقل الظل للصورة */
-    border: 1px solid var(--border); /* نقل الحدود للصورة */
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+/* ============================================================ */
+/* ✅ [NEW] أنماط الميزات الجديدة                                */
+/* ============================================================ */
+
+/* --- قسم بيانات الاستعادة في التسجيل --- */
+.recovery-section {
+    background: rgba(243,146,0,0.05);
+    border: 1px solid rgba(243,146,0,0.2);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 15px;
+    overflow: hidden;
+    text-align: right;
+}
+.recovery-header {
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    user-select: none;
+}
+.recovery-header:active { background: rgba(243,146,0,0.1); }
+.recovery-header i { transition: transform 0.3s; }
+.recovery-header.open i { transform: rotate(180deg); }
+.recovery-hint {
+    padding: 0 16px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0;
+}
+.recovery-fields {
+    padding: 0 12px 12px;
+}
+.recovery-fields input {
+    margin-bottom: 10px;
+    font-size: 14px;
+    padding: 12px 14px;
+}
+
+/* --- تبويبات المحفظة السفلية --- */
+.wallet-bottom-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    background: var(--bg);
+    padding: 6px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    gap: 6px;
+}
+.wallet-bottom-tab {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-radius: 12px;
+    transition: 0.3s;
+    user-select: none;
+}
+.wallet-bottom-tab.active {
+    background: var(--card-bg);
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* --- جدول الأجهزة للمدير --- */
+.devices-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: right;
+}
+.devices-table th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 8px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.devices-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.devices-table tr:hover { background: rgba(30,125,34,0.03); }
+.fp-code {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    word-break: break-all;
+    color: var(--text-muted);
+    direction: ltr;
+    display: inline-block;
+    max-width: 150px;
+}
+
+/* --- العروض المعلقة --- */
+.pending-offers {
+    margin-bottom: 15px;
+}
+.pending-offers-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.offer-card {
+    background: linear-gradient(135deg, #fff8e5, #fef3c7);
+    border: 1px solid #f59e0b;
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 10px;
+    position: relative;
+}
+[data-theme="dark"] .offer-card {
+    background: linear-gradient(135deg, #2a2210, #3a2f15);
+    border-color: #b8860b;
+}
+.offer-card .offer-amount {
+    font-size: 22px;
+    font-weight: 800;
+    color: #c97d00;
+    margin: 5px 0;
+}
+.offer-card .offer-time-left {
+    font-size: 11px;
+    color: #b45309;
+    background: rgba(245,158,11,0.15);
+    padding: 3px 10px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+/* --- واجهة المحادثة الاحترافية (واتساب-لايك) --- */
+.chat-fullscreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    direction: rtl;
+}
+.chat-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+.chat-header .chat-back {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-header .chat-info { flex: 1; }
+.chat-header .chat-name { font-size: 15px; font-weight: 700; }
+.chat-header .chat-status { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+.chat-timer {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.chat-timer.warning { background: rgba(243,146,0,0.35); }
+.chat-timer.danger { background: rgba(231,76,60,0.5); }
+
+.chat-expired-banner {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px 12px;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 20% 20%, rgba(30,125,34,0.03), transparent 40%);
+}
+.chat-date-divider {
+    text-align: center;
+    margin: 15px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    padding: 5px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.chat-bubble-row {
+    display: flex;
+    margin-bottom: 8px;
+    align-items: flex-end;
+    gap: 6px;
+}
+.chat-bubble-row.mine { justify-content: flex-start; }
+.chat-bubble-row.theirs { justify-content: flex-end; }
+.chat-bubble {
+    max-width: 78%;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.chat-bubble-row.mine .chat-bubble {
+    background: var(--primary);
+    color: white;
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble-row.theirs .chat-bubble {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble-time {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-top: 4px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+}
+.chat-bubble-row.theirs .chat-bubble-time { color: var(--text-muted); }
+.chat-bubble-time .read-marks { font-size: 11px; }
+.chat-bubble-time .read-marks.blue { color: #3498db; }
+.chat-bubble-time .read-marks.gray { color: rgba(255,255,255,0.6); }
+.chat-bubble-row.theirs .read-marks.gray { color: var(--text-muted); }
+
+.chat-bubble img.chat-image {
+    max-width: 220px;
+    max-height: 220px;
+    border-radius: 8px;
+    display: block;
+    cursor: pointer;
+}
+.chat-bubble audio.chat-audio {
+    max-width: 220px;
+    height: 36px;
+    margin: 4px 0;
+}
+.chat-bubble .chat-reply-preview {
+    border-right: 3px solid var(--accent);
+    background: rgba(0,0,0,0.05);
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+.chat-bubble-row.mine .chat-bubble .chat-reply-preview {
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.9);
+    border-right-color: rgba(255,255,255,0.5);
+}
+
+.chat-bubble-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: 0.2s;
+}
+.chat-bubble-row:hover .chat-bubble-actions { opacity: 1; }
+.chat-bubble-actions button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.chat-typing {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 15px;
+    font-style: italic;
+    min-height: 20px;
+    flex-shrink: 0;
+}
+
+.chat-input-bar {
+    background: var(--card-bg);
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+    position: relative;
+}
+.chat-input-bar input[type="text"] {
+    flex: 1;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 15px;
+    font-size: 14px;
+    background: var(--bg);
+}
+.chat-input-bar input[type="text"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(30,125,34,0.1);
+}
+.chat-input-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: 0.2s;
+}
+.chat-input-btn:active { transform: scale(0.9); }
+.chat-input-btn.recording {
+    background: #e74c3c;
+    animation: pulse 1s infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+.chat-emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    width: 260px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+.chat-emoji-picker span {
+    font-size: 22px;
+    cursor: pointer;
+    text-align: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: 0.15s;
+}
+.chat-emoji-picker span:hover { background: var(--bg); }
+
+.chat-recording-indicator {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #e74c3c;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 14px;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(231,76,60,0.4);
+}
+
+/* --- عرض السعر داخل المحادثة --- */
+.payment-request-bubble {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 16px;
+    padding: 15px;
+    max-width: 320px;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+}
+.payment-request-bubble .pr-title {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-bottom: 6px;
+}
+.payment-request-bubble .pr-amount {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 8px 0;
+}
+.payment-request-bubble .pr-type {
+    font-size: 12px;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 10px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+.payment-request-bubble .pr-note {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+.payment-request-bubble .pr-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.payment-request-bubble .pr-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 13px;
+}
+.payment-request-bubble .pr-actions button.accept {
+    background: #27ae60;
+    color: white;
+}
+.payment-request-bubble .pr-actions button.reject {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+/* --- استجابة للشاشات الكبيرة (كمبيوتر) --- */
+@media (min-width: 768px) {
+    .chat-fullscreen {
+        max-width: 600px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 20px;
+        top: 20px;
+        bottom: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
 }

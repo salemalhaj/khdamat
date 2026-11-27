@@ -6,7 +6,7 @@
     <title>منصة خدمات - Khdamat</title>
     <script>
     window.onerror = function(msg, url, line) {
-        alert("⚠️ خطأ في السطر " + line + ":\n" + msg);
+        console.error("خطأ في السطر " + line + ": " + msg);
         return false;
     };
     </script>
@@ -28,7 +28,14 @@
                 <input type="email" id="login-email" data-i18n-placeholder="email" placeholder="البريد الإلكتروني">
                 <input type="password" id="login-password" data-i18n-placeholder="password" placeholder="كلمة المرور">
                 <button class="btn btn-primary" id="btn-do-login" data-i18n="login_btn">دخول</button>
-                <a href="#" id="link-to-signup" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;" data-i18n="create_acc">أنشئ حساباً جديداً</a>
+                <!-- ✅ NEW: روابط الاستعادة -->
+                <div style="display:flex; justify-content:space-between; margin-top:10px; gap:10px;">
+                    <a href="#" id="link-forgot-password" style="color:var(--primary); font-size:13px; font-weight:bold; text-decoration:none; flex:1; text-align:right;">🔐 نسيت كلمة المرور؟</a>
+                    <a href="#" id="link-forgot-email" style="color:var(--accent); font-size:13px; font-weight:bold; text-decoration:none; flex:1; text-align:left;">📧 نسيت بريدك؟</a>
+                </div>
+                <div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+                    <a href="#" id="link-to-signup" style="color:var(--accent); font-size:14px; font-weight:bold; text-decoration:none; display:block;" data-i18n="create_acc">أنشئ حساباً جديداً</a>
+                </div>
             </div>
         </div>
         <div id="signup-screen" class="container hidden" style="margin-top: 30px;">
@@ -38,11 +45,28 @@
                 <input type="text" id="signup-name" data-i18n-placeholder="full_name" placeholder="الاسم الكامل">
                 <input type="email" id="signup-email" data-i18n-placeholder="email" placeholder="البريد الإلكتروني">
                 <input type="text" id="signup-phone" data-i18n-placeholder="phone" placeholder="رقم الهاتف">
-                <input type="password" id="signup-password" data-i18n-placeholder="password" placeholder="كلمة المرور">
+                <input type="password" id="signup-password" data-i18n-placeholder="password" placeholder="كلمة المرور (8 أحرف على الأقل، حرف كبير، حرف صغير، رقم)">
                 <select id="signup-role">
                     <option value="user" data-i18n="role_user">صاحب عمل (أطلب خدمة)</option>
                     <option value="provider" data-i18n="role_provider">مزود خدمة (أقدم خدمة)</option>
                 </select>
+                <!-- ✅ NEW: قسم بيانات الاستعادة -->
+                <div class="recovery-section" id="recovery-section">
+                    <div class="recovery-header" onclick="toggleRecoverySection()">
+                        <span>🔐 بيانات استعادة البريد (اختيارية)</span>
+                        <i class="fa-solid fa-chevron-down" id="recovery-toggle-icon"></i>
+                    </div>
+                    <p class="recovery-hint">هذه البيانات ليست إجبارية، إنما لإستعادة بريدك الإلكتروني في حال نسيانه فقط.</p>
+                    <div class="recovery-fields hidden" id="recovery-fields">
+                        <input type="text" id="signup-national-id" placeholder="الرقم الوطني">
+                        <input type="text" id="signup-id-card" placeholder="رقم بطاقة التعريف">
+                        <input type="text" id="signup-passport" placeholder="رقم جواز السفر">
+                        <input type="text" id="signup-bank-name" placeholder="اسم المصرف">
+                        <input type="text" id="signup-bank-branch" placeholder="الفرع">
+                        <input type="text" id="signup-bank-account" placeholder="رقم الحساب المصرفي">
+                        <input type="text" id="signup-iban" placeholder="رقم الحساب الدولي (IBAN)" dir="ltr">
+                    </div>
+                </div>
                 <button class="btn btn-accent" id="btn-do-signup" data-i18n="signup_btn">تسجيل</button>
                 <a href="#" id="link-to-login" style="color:var(--primary); font-size:14px; font-weight:bold; text-decoration:none; display:block; margin-top:10px;" data-i18n="have_acc">لديك حساب؟ سجل الدخول</a>
             </div>
@@ -58,9 +82,9 @@
             <div style="display:flex; gap:8px; align-items:center;">
                 <button class="theme-toggle" id="btn-lang-main"><i class="fa-solid fa-language"></i></button>
                 <button class="theme-toggle" id="btn-notifications" style="position:relative;">
-    <i class="fa-solid fa-bell"></i>
-    <span id="notif-badge" class="hidden" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border-radius:50%; font-size:12px; padding:2px 6px; font-weight:bold;">0</span>
-</button>
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="notif-badge" class="hidden" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border-radius:50%; font-size:12px; padding:2px 6px; font-weight:bold;">0</span>
+                </button>
                 <button class="theme-toggle" id="btn-theme-main"><i class="fa-solid fa-moon"></i></button>
                 <button class="theme-toggle" id="btn-profile"><i class="fa-solid fa-user"></i></button>
                 <button class="theme-toggle" id="btn-logout"><i class="fa-solid fa-power-off"></i></button>
@@ -73,6 +97,10 @@
             <div id="page-orders" class="page hidden"></div>
             <div id="page-messages" class="page hidden"></div>
             <div id="page-admin" class="page hidden"></div>
+            <!-- ✅ NEW: صفحات المتجر صريحة -->
+            <div id="page-cards" class="page hidden"></div>
+            <div id="page-cart" class="page hidden"></div>
+            <div id="page-my-purchases" class="page hidden"></div>
         </div>
         <div class="bottom-nav">
             <div class="nav-item active" id="nav-home" onclick="navTo('home')"><i class="fa-solid fa-house"></i><span data-i18n="nav_home">الرئيسية</span></div>
@@ -80,6 +108,10 @@
             <div class="nav-item" id="nav-wallet" onclick="navTo('wallet')"><i class="fa-solid fa-wallet"></i><span data-i18n="nav_wallet">المحفظة</span></div>
             <div class="nav-item" id="nav-orders" onclick="navTo('orders')"><i class="fa-solid fa-clipboard-list"></i><span data-i18n="nav_orders">طلباتي</span></div>
             <div class="nav-item" id="nav-messages" onclick="navTo('messages')"><i class="fa-solid fa-comments"></i><span data-i18n="nav_messages">الرسائل</span></div>
+            <!-- ✅ NEW: المتجر والسلة والمشتريات -->
+            <div class="nav-item" id="nav-cards" onclick="navTo('cards')"><i class="fa-solid fa-store"></i><span data-i18n="nav_store">المتجر</span></div>
+            <div class="nav-item" id="nav-cart" onclick="navTo('cart')" style="position:relative;"><i class="fa-solid fa-cart-shopping"></i><span data-i18n="nav_cart">السلة</span><span id="cart-badge" class="hidden" style="position:absolute; top:-4px; right:0; background:var(--accent); color:white; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">0</span></div>
+            <div class="nav-item" id="nav-my-purchases" onclick="navTo('my-purchases')"><i class="fa-solid fa-receipt"></i><span data-i18n="nav_purchases">مشترياتي</span></div>
             <div class="nav-item hidden" id="nav-admin" onclick="navTo('admin')"><i class="fa-solid fa-shield-halved"></i><span data-i18n="nav_admin">الإدارة</span></div>
         </div>
     </div>

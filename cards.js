@@ -444,7 +444,12 @@ function loadAdminStoreProducts() {
     var html = '';
     if (res.data && res.data.length > 0) {
       res.data.forEach(function(p) {
-        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;">' + (p.image_url ? '<img src="' + escHtml(p.image_url) + '" style="width:50px; height:30px; object-fit:cover; border-radius:4px;">' : '') + '<div><strong>' + escHtml(p.name) + '</strong><br><small style="color:var(--text-muted);">' + (p.companies ? escHtml(p.companies.name) : '') + ' - السعر: ' + p.price + ' - مخزون: ' + (p.stock || 0) + '</small></div></div><div style="display:flex; gap:5px;"><button class="btn btn-sm" style="margin:0; background:var(--primary); color:white;" onclick="addCodesForm(\'' + escJs(p.id) + '\')" title="إضافة أكواد"><i class="fa-solid fa-key"></i></button><button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editProductForm(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteProduct(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-trash"></i></button></div></div>';
+        html += '<div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:10px;">' + (p.image_url ? '<img src="' + escHtml(p.image_url) + '" style="width:50px; height:30px; object-fit:cover; border-radius:4px;">' : '') + '<div><strong>' + escHtml(p.name) + '</strong><br><small style="color:var(--text-muted);">' + (p.companies ? escHtml(p.companies.name) : '') + ' - السعر: ' + p.price + ' - مخزون: ' + (p.stock || 0) + '</small></div></div><div style="display:flex; gap:5px;">' +
+        '<button class="btn btn-sm" style="margin:0; background:#3498db; color:white;" onclick="viewProductCodes(\'' + escJs(p.id) + '\', \'' + escJs(p.name) + '\')" title="عرض الأكواد"><i class="fa-solid fa-list"></i></button>' +
+        '<button class="btn btn-sm" style="margin:0; background:var(--primary); color:white;" onclick="addCodesForm(\'' + escJs(p.id) + '\')" title="إضافة أكواد"><i class="fa-solid fa-key"></i></button>' +
+        '<button class="btn btn-sm" style="margin:0; background:#f39c12; color:white;" onclick="editProductForm(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-pen"></i></button>' +
+        '<button class="btn btn-sm" style="margin:0; background:#e74c3c; color:white;" onclick="deleteProduct(\'' + escJs(p.id) + '\')"><i class="fa-solid fa-trash"></i></button>' +
+        '</div></div>';
       });
     } else { html = '<p style="text-align:center;">لا توجد بطاقات.</p>'; }
     document.getElementById('admin-products-list').innerHTML = html;
@@ -502,6 +507,7 @@ function loadAdminStoreOrders() {
       res.data.forEach(function(o) {
         var d = new Date(o.created_at);
         var dateStr = d.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' - ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        var relTime = typeof getRelativeTime === 'function' ? getRelativeTime(d) : '';
         var itemsHtml = (o.card_order_items || []).map(function(i) {
           return '<li style="margin-bottom:5px; padding:8px; background:#f9f9f9; border-radius:6px;"><strong>' + escHtml(i.product_name) + '</strong> × ' + i.quantity + ' = ' + i.subtotal + ' ' + t('currency') + '</li>';
         }).join('');
@@ -512,7 +518,7 @@ function loadAdminStoreOrders() {
           codesHtml += '</ul></div>';
         }
         var cust = o.profiles || {};
-        html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;"><div style="flex:1;"><div style="font-size:11px; color:var(--text-muted);">#' + String(o.id).substring(0, 8) + '</div><div style="font-weight:bold; color:var(--primary); margin:4px 0;"><i class="fa-solid fa-user"></i> ' + escHtml(cust.full_name || 'غير معروف') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-phone"></i> ' + escHtml(cust.phone || '-') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ' + escHtml(cust.email || '-') + '</div><div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="fa-regular fa-calendar"></i> ' + dateStr + '</div></div><div style="text-align:left;"><div style="font-size:22px; font-weight:bold; color:var(--accent);">' + o.total_amount + '</div><div style="font-size:11px; color:var(--text-muted);">' + t('currency') + '</div></div></div><ul style="margin:0; padding-right:0; list-style:none; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' + codesHtml + '</div>';
+        html += '<div class="card" style="padding:15px; margin-bottom:12px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;"><div style="flex:1;"><div style="font-size:11px; color:var(--text-muted);">#' + String(o.id).substring(0, 8) + '</div><div style="font-weight:bold; color:var(--primary); margin:4px 0;"><i class="fa-solid fa-user"></i> ' + escHtml(cust.full_name || 'غير معروف') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-phone"></i> ' + escHtml(cust.phone || '-') + '</div><div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ' + escHtml(cust.email || '-') + '</div><div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="fa-regular fa-calendar"></i> ' + dateStr + '</div><div style="font-size:11px; color:var(--accent); margin-top:3px;"><i class="fa-solid fa-clock-rotate-left"></i> ' + relTime + '</div></div><div style="text-align:left;"><div style="font-size:22px; font-weight:bold; color:var(--accent);">' + o.total_amount + '</div><div style="font-size:11px; color:var(--text-muted);">' + t('currency') + '</div></div></div><ul style="margin:0; padding-right:0; list-style:none; font-size:13px; border-top:1px solid #eee; padding-top:10px;">' + itemsHtml + '</ul>' + codesHtml + '</div>';
       });
       box.innerHTML = html;
     }).catch(handleError);
@@ -533,4 +539,108 @@ function addCodesForm(productId) {
     Swal.fire({ title: 'جاري الرفع...', didOpen: function() { Swal.showLoading(); } });
     _supabase.from('digital_codes').insert(rows).then(function(insRes) { if (insRes.error) throw insRes.error; return _supabase.from('digital_codes').select('*', { count: 'exact', head: true }).eq('product_id', productId).eq('is_used', false).then(function(cntRes) { return _supabase.from('card_products').update({ stock: cntRes.count }).eq('id', productId); }); }).then(function() { Swal.fire(t('success'), 'تم رفع ' + rows.length + ' كود', 'success'); loadAdminStoreProducts(); }).catch(handleError);
   });
+}
+
+// ✅ دالة عرض الأكواد لكل منتج
+function viewProductCodes(productId, productName, filterMode) {
+    if (!filterMode) filterMode = 'all';
+    Swal.fire({ title: 'جاري التحميل...', didOpen: function() { Swal.showLoading(); } });
+    _supabase.from('digital_codes')
+        .select('*, profiles!digital_codes_used_by_fkey(full_name, phone)')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false })
+        .then(function(res) {
+            if (res.error) return Swal.fire('خطأ', res.error.message, 'error');
+            var codes = res.data || [];
+            var total = codes.length;
+            var usedCount = codes.filter(function(c) { return c.is_used; }).length;
+            var availableCount = total - usedCount;
+
+            // تصفية حسب الفلتر
+            var filtered = codes;
+            if (filterMode === 'available') filtered = codes.filter(function(c) { return !c.is_used; });
+            else if (filterMode === 'used') filtered = codes.filter(function(c) { return c.is_used; });
+
+            var html = '<div style="text-align:right;">';
+            html += '<h4 style="margin-bottom:12px; color:var(--primary); font-size:15px;">📦 ' + escHtml(productName) + '</h4>';
+            
+            // إحصائيات سريعة
+            html += '<div style="display:flex; gap:8px; margin-bottom:12px;">' +
+                '<div style="flex:1; background:#e8f5e9; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#27ae60;">' + availableCount + '</div><div style="font-size:10px;">متاح</div></div>' +
+                '<div style="flex:1; background:#fee; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#e74c3c;">' + usedCount + '</div><div style="font-size:10px;">مستخدم</div></div>' +
+                '<div style="flex:1; background:#eef5ff; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#3498db;">' + total + '</div><div style="font-size:10px;">الإجمالي</div></div>' +
+            '</div>';
+
+            // أزرار الفلتر
+            html += '<div style="display:flex; gap:5px; margin-bottom:12px; background:#f0f0f0; padding:4px; border-radius:10px;">' +
+                '<button onclick="viewProductCodes(\'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'all\')" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; ' + (filterMode === 'all' ? 'background:var(--primary); color:white;' : 'background:transparent; color:#666;') + '">الكل (' + total + ')</button>' +
+                '<button onclick="viewProductCodes(\'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'available\')" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; ' + (filterMode === 'available' ? 'background:#27ae60; color:white;' : 'background:transparent; color:#666;') + '">المتاح (' + availableCount + ')</button>' +
+                '<button onclick="viewProductCodes(\'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'used\')" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; ' + (filterMode === 'used' ? 'background:#e74c3c; color:white;' : 'background:transparent; color:#666;') + '">المستخدم (' + usedCount + ')</button>' +
+            '</div>';
+
+            if (filtered.length === 0) {
+                html += '<p style="text-align:center; color:#888; padding:20px;">لا توجد أكواد ' + (filterMode === 'available' ? 'متاحة' : filterMode === 'used' ? 'مستخدمة' : '') + ' لهذا المنتج.</p>';
+            } else {
+                html += '<div style="max-height:340px; overflow-y:auto; border:1px solid #ddd; border-radius:8px;">';
+                html += '<table style="width:100%; border-collapse:collapse; font-size:12px;">';
+                html += '<thead><tr style="background:var(--primary); color:white; position:sticky; top:0; z-index:1;">' +
+                    '<th style="padding:8px; text-align:right;">#</th>' +
+                    '<th style="padding:8px; text-align:right;">التسلسلي</th>' +
+                    '<th style="padding:8px; text-align:right;">الرقم السري</th>' +
+                    '<th style="padding:8px; text-align:center;">الحالة</th>' +
+                    '<th style="padding:8px; text-align:right;">المشتري / التاريخ</th>' +
+                    '</tr></thead><tbody>';
+                filtered.forEach(function(c, i) {
+                    var statusBadge = c.is_used 
+                        ? '<span style="background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:10px; white-space:nowrap;">مستخدم</span>' 
+                        : '<span style="background:#27ae60; color:white; padding:2px 8px; border-radius:10px; font-size:10px; white-space:nowrap;">متاح</span>';
+                    var buyer = '-';
+                    if (c.is_used && c.profiles) {
+                        var soldDate = c.used_at ? new Date(c.used_at).toLocaleDateString('ar-EG') : (c.updated_at ? new Date(c.updated_at).toLocaleDateString('ar-EG') : '');
+                        buyer = '<b>' + escHtml(c.profiles.full_name) + '</b><br><small style="color:#888;">' + escHtml(c.profiles.phone || '-') + '</small>' + (soldDate ? '<br><small style="color:#27ae60;">📅 ' + soldDate + '</small>' : '');
+                    }
+                    html += '<tr style="border-bottom:1px solid #eee; ' + (c.is_used ? 'background:#fff5f5;' : '') + '">' +
+                        '<td style="padding:6px;">' + (i + 1) + '</td>' +
+                        '<td style="padding:6px; font-family:monospace; direction:ltr; font-size:11px;">' + escHtml(c.serial_number || '-') + '</td>' +
+                        '<td style="padding:6px; font-family:monospace; direction:ltr; font-weight:bold; color:var(--primary); font-size:11px;">' + escHtml(c.pin_code || '-') + '</td>' +
+                        '<td style="padding:6px; text-align:center;">' + statusBadge + '</td>' +
+                        '<td style="padding:6px; font-size:11px;">' + buyer + '</td>' +
+                    '</tr>';
+                });
+                html += '</tbody></table></div>';
+                
+                // زر النسخ يظهر فقط للأكواد المتاحة
+                if (filterMode !== 'used') {
+                    var availableCodes = codes.filter(function(c) { return !c.is_used; });
+                    if (availableCodes.length > 0) {
+                        var codesList = availableCodes.map(function(c) { return (c.serial_number || '') + ' , ' + (c.pin_code || ''); }).join('\n');
+                        html += '<button onclick="copyCodesToClipboard(this)" data-codes="' + escAttr(codesList) + '" style="width:100%; margin-top:12px; padding:10px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fa-solid fa-copy"></i> نسخ الأكواد المتاحة (' + availableCodes.length + ')</button>';
+                    }
+                }
+            }
+            html += '</div>';
+            Swal.fire({ title: '📋 أكواد البطاقات', html: html, confirmButtonText: 'إغلاق', width: 650 });
+        }).catch(handleError);
+}
+
+// ✅ نسخ الأكواد للحافظة
+function copyCodesToClipboard(btn) {
+    var codes = btn.getAttribute('data-codes');
+    if (!codes) return;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(codes).then(function() {
+            var original = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ!';
+            btn.style.background = '#27ae60';
+            setTimeout(function() { btn.innerHTML = original; btn.style.background = 'var(--accent)'; }, 1500);
+        });
+    } else {
+        var textarea = document.createElement('textarea');
+        textarea.value = codes;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ!';
+    }
 }
