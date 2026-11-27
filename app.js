@@ -2188,29 +2188,45 @@ function loadAdminDevices() {
     if (!box) return;
     box.innerHTML = '<p>' + t('loading') + '</p>';
     
-    // جلب الأجهزة أولاً بدون ربطها بجدول المستخدمين
+    console.log("1️⃣ جاري محاولة جلب الأجهزة من جدول registered_devices...");
+
+    // جلب الأجهزة
     _supabase.from('registered_devices').select('*').order('created_at', { ascending: false }).then(function(res) {
-        if (res.error) { box.innerHTML = '<p style="color:red;">' + escHtml(res.error.message) + '</p>'; return; }
-        if (!res.data || !res.data.length) { box.innerHTML = '<div class="card"><p style="text-align:center;">لا توجد أجهزة مسجلة.</p></div>'; return; }
+        console.log("2️⃣ رد قاعدة البيانات (الأجهزة):", res);
+
+        if (res.error) { 
+            box.innerHTML = '<p style="color:red;">خطأ من قاعدة البيانات: ' + escHtml(res.error.message) + '</p>'; 
+            return; 
+        }
         
-        // استخراج معرفات المستخدمين لجلب أسمائهم
+        if (!res.data || res.data.length === 0) { 
+            box.innerHTML = '<div class="card"><p style="text-align:center;">قاعدة البيانات أعادت قائمة فارغة. (إما لا توجد أجهزة، أو صلاحيات القراءة ممنوعة).</p></div>'; 
+            return; 
+        }
+        
         var userIds = res.data.map(function(d) { return d.user_id; }).filter(function(id) { return id; });
+        console.log("3️⃣ معرفات المستخدمين المرتبطين بالأجهزة:", userIds);
         
+        // جلب بيانات المستخدمين
         _supabase.from('profiles').select('id, full_name, email, phone, role').in('id', userIds).then(function(pRes) {
+            console.log("4️⃣ رد قاعدة البيانات (المستخدمين):", pRes);
+
             var profilesMap = {};
             if (pRes.data) pRes.data.forEach(function(p) { profilesMap[p.id] = p; });
             
             var html = '<div class="card" style="padding:15px;"><h4 style="margin-bottom:15px;">📱 الأجهزة المسجلة (' + res.data.length + ')</h4><div style="overflow-x:auto;"><table class="devices-table"><thead><tr><th>المستخدم</th><th>البريد</th><th>التاريخ</th><th>IP</th><th>البصمة</th><th>إجراء</th></tr></thead><tbody>';
+            
             res.data.forEach(function(dev) {
-                var p = profilesMap[dev.user_id] || {}; // ربط بيانات المستخدم يدوياً
+                var p = profilesMap[dev.user_id] || { full_name: 'غير معروف', role: 'مستخدم', email: dev.email }; 
                 var created = new Date(dev.created_at).toLocaleDateString('ar-EG');
                 var relTime = getRelativeTime(dev.created_at);
                 var fp = dev.device_fingerprint || '';
                 var fpShort = fp.length > 16 ? fp.substring(0, 16) + '...' : fp;
                 var browserInfo = dev.browser_info || {};
                 var browserTxt = browserInfo.browser ? (browserInfo.browser + ' / ' + (browserInfo.os || '')) : '-';
+                
                 html += '<tr>';
-                html += '<td><b>' + escHtml(p.full_name || '-') + '</b><br><small style="color:#888;">' + (p.role === 'provider' ? 'مزود' : p.role === 'admin' ? 'مدير' : 'مستخدم') + '</small></td>';
+                html += '<td><b>' + escHtml(p.full_name || 'غير معروف') + '</b><br><small style="color:#888;">' + (p.role === 'provider' ? 'مزود' : p.role === 'admin' ? 'مدير' : 'مستخدم') + '</small></td>';
                 html += '<td><span dir="ltr" style="font-size:10px;">' + escHtml(dev.email || p.email || '-') + '</span></td>';
                 html += '<td><div style="font-size:11px;">' + created + '</div><div style="font-size:10px; color:#27ae60;">' + relTime + '</div></td>';
                 html += '<td><span dir="ltr" style="font-family:monospace; font-size:10px;">' + escHtml(dev.ip_address || '-') + '</span></td>';
@@ -2220,6 +2236,7 @@ function loadAdminDevices() {
             });
             html += '</tbody></table></div></div>';
             box.innerHTML = html;
+            console.log("5️⃣ تم عرض الأجهزة بنجاح في الصفحة.");
         });
     }).catch(handleError);
 }
