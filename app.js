@@ -2889,6 +2889,10 @@ function checkSession() {
 // ================= 16. التشغيل النهائي =================
 document.addEventListener('DOMContentLoaded', function() {
     var savedTheme = localStorage.getItem('theme') || 'light';
+        // إجبار نوافذ التنبيه على الظهور فوق المحادثة
+    var swalStyle = document.createElement('style');
+    swalStyle.innerHTML = '.swal2-container { z-index: 999999 !important; }';
+    document.head.appendChild(swalStyle);
     document.documentElement.setAttribute('data-theme', savedTheme);
     applyTranslations();
 
