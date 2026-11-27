@@ -1307,15 +1307,16 @@ function initiateChat(providerId, providerName) {
     _supabase.from('chat_permissions').select('*').eq('client_id', currentUser.id).eq('provider_id', providerId).maybeSingle().then(function(res) {
         var now = new Date();
         var price = (platformSettings.chat_price !== undefined && platformSettings.chat_price !== null) ? Number(platformSettings.chat_price) : 10;
+        var days = (platformSettings.chat_duration_days !== undefined && platformSettings.chat_duration_days !== null) ? Number(platformSettings.chat_duration_days) : 10;
 
         if (res.data && res.data.expires_at && new Date(res.data.expires_at) > now) {
             openChat(providerId, providerName, res.data);
         } else if (res.data && res.data.expires_at && new Date(res.data.expires_at) <= now) {
             Swal.fire({
                 title: '⏰ انتهت مدة المحادثة',
-                text: 'لتمديد المحادثة مع ' + providerName + '، يجب دفع ' + price + ' د.ل لمدة 10 أيام إضافية.',
+                text: 'لتمديد المحادثة مع ' + providerName + '، يجب دفع ' + price + ' د.ل لمدة ' + days + ' أيام إضافية.',
                 icon: 'info', showCancelButton: true,
-                confirmButtonText: 'تمديد 10 أيام (' + price + ' د.ل)',
+                confirmButtonText: 'تمديد ' + days + ' أيام (' + price + ' د.ل)',
                 cancelButtonText: 'إلغاء'
             }).then(function(r) {
                 if (r.isConfirmed) payAndExtendChat(providerId, providerName, price);
@@ -1323,7 +1324,7 @@ function initiateChat(providerId, providerName) {
         } else {
             Swal.fire({
                 title: 'فتح محادثة',
-                text: 'لبدء محادثة مع ' + providerName + '، يجب دفع ' + price + ' د.ل لمدة 10 أيام.',
+                text: 'لبدء محادثة مع ' + providerName + '، يجب دفع ' + price + ' د.ل لمدة ' + days + ' أيام.',
                 icon: 'info', showCancelButton: true,
                 confirmButtonText: 'دفع وفتح المحادثة (' + price + ' د.ل)',
                 cancelButtonText: 'إلغاء'
@@ -1335,12 +1336,13 @@ function initiateChat(providerId, providerName) {
 }
 
 function payAndExtendChat(providerId, providerName, price) {
+    var days = (platformSettings.chat_duration_days !== undefined && platformSettings.chat_duration_days !== null) ? Number(platformSettings.chat_duration_days) : 10;
     Swal.fire({ title: 'جاري الدفع...', didOpen: function() { Swal.showLoading(); } });
     _supabase.rpc('extend_chat_permission', { p_provider_id: providerId, p_amount: price }).then(function(res) {
         if (res.error || !res.data || !res.data.success) {
             Swal.fire('خطأ', res.error ? res.error.message : (res.data ? res.data.message : 'فشل الدفع'), 'error');
         } else {
-            Swal.fire({ title: '✅ تم', text: 'تم فتح المحادثة لمدة 10 أيام', icon: 'success', timer: 1500, showConfirmButton: false });
+            Swal.fire({ title: '✅ تم', text: 'تم فتح المحادثة لمدة ' + days + ' أيام', icon: 'success', timer: 1500, showConfirmButton: false });
             setTimeout(function() {
                 _supabase.from('chat_permissions').select('*').eq('client_id', currentUser.id).eq('provider_id', providerId).maybeSingle().then(function(r) {
                     if (r.data) openChat(providerId, providerName, r.data);
@@ -1877,11 +1879,16 @@ function uploadAudioBlob(blob) {
 function extendChatFromChat() {
     if (!currentChatUserId) return;
     var price = (platformSettings.chat_price !== undefined && platformSettings.chat_price !== null) ? Number(platformSettings.chat_price) : 10;
+    
+    // قراءة المدة من إعدادات المنصة، وإذا لم توجد نضع 10 كافتراضي
+    var days = (platformSettings.chat_duration_days !== undefined && platformSettings.chat_duration_days !== null) ? Number(platformSettings.chat_duration_days) : 10;
+
     Swal.fire({
         title: '🔄 تمديد المحادثة',
-        text: 'تمديد لمدة 10 أيام مقابل ' + price + ' د.ل',
+        text: 'تمديد لمدة ' + days + ' أيام مقابل ' + price + ' د.ل',
         icon: 'question', showCancelButton: true,
-        confirmButtonText: 'تمديد (' + price + ' د.ل)', cancelButtonText: t('cancel')
+        confirmButtonText: 'تمديد ' + days + ' أيام (' + price + ' د.ل)', 
+        cancelButtonText: t('cancel')
     }).then(function(r) {
         if (!r.isConfirmed) return;
         Swal.fire({ title: 'جاري الدفع...', didOpen: function() { Swal.showLoading(); } });
@@ -1889,7 +1896,7 @@ function extendChatFromChat() {
             if (res.error || !res.data || !res.data.success) {
                 return Swal.fire('خطأ', res.error ? res.error.message : (res.data ? res.data.message : 'فشل'), 'error');
             }
-            Swal.fire('✅ تم', 'تم تمديد المحادثة 10 أيام', 'success');
+            Swal.fire('✅ تم', 'تم تمديد المحادثة ' + days + ' أيام', 'success');
             closeChat();
             setTimeout(function() { initiateChat(currentChatUserId, currentChatUserName); }, 500);
         });
@@ -2513,18 +2520,26 @@ function loadAdminSettings() {
     var container = document.getElementById('a-settings');
     if (!container) return;
     var currentPrice = platformSettings.chat_price || 10;
-    var html = '<div class="card" style="padding:20px;"><h4 style="margin-bottom:15px; color:var(--primary);">إعدادات المنصة</h4><label style="font-weight:bold; display:block; margin-bottom:5px;">سعر فتح المحادثة (د.ل):</label><input type="number" id="chat-price-setting" value="' + escHtml(currentPrice) + '" style="margin-bottom:15px;"><button class="btn btn-primary" onclick="updateChatPrice()">حفظ السعر</button></div>';
+    var currentDays = platformSettings.chat_duration_days || 10;
+    var html = '<div class="card" style="padding:20px;"><h4 style="margin-bottom:15px; color:var(--primary);">إعدادات المنصة</h4>' +
+        '<label style="font-weight:bold; display:block; margin-bottom:5px;">سعر فتح المحادثة (د.ل):</label>' +
+        '<input type="number" id="chat-price-setting" value="' + escHtml(currentPrice) + '" style="margin-bottom:15px;">' +
+        '<label style="font-weight:bold; display:block; margin-bottom:5px;">مدة فتح المحادثة (أيام):</label>' +
+        '<input type="number" id="chat-days-setting" value="' + escHtml(currentDays) + '" style="margin-bottom:15px;">' +
+        '<button class="btn btn-primary" onclick="updatePlatformSettings()">حفظ الإعدادات</button></div>';
     container.innerHTML = html;
 }
 
-function updateChatPrice() {
+function updatePlatformSettings() {
     var newPrice = parseFloat(document.getElementById('chat-price-setting').value);
-    if (isNaN(newPrice) || newPrice < 0) return Swal.fire('تنبيه', 'أدخل سعراً صحيحاً', 'warning');
+    var newDays = parseInt(document.getElementById('chat-days-setting').value);
+    if (isNaN(newPrice) || newPrice < 0 || isNaN(newDays) || newDays < 1) return Swal.fire('تنبيه', 'أدخل قيماً صحيحة', 'warning');
     Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
-    _supabase.from('platform_settings').update({ chat_price: newPrice }).eq('id', 1).then(function(res) {
+    _supabase.from('platform_settings').update({ chat_price: newPrice, chat_duration_days: newDays }).eq('id', 1).then(function(res) {
         if (res.error) return Swal.fire('خطأ', res.error.message, 'error');
         platformSettings.chat_price = newPrice;
-        Swal.fire('تم', 'تم تحديث السعر', 'success');
+        platformSettings.chat_duration_days = newDays;
+        Swal.fire('تم', 'تم تحديث الإعدادات بنجاح', 'success');
     });
 }
 
