@@ -69,7 +69,15 @@ var translations = {
         pay_now: "ادفع الآن", reject_offer: "رفض",
         type_message: "اكتب رسالتك...", record_voice: "تسجيل صوتي",
         attach_image: "صورة", attach_file: "ملف PDF", emoji: "إيموجي",
-        recording: "جاري التسجيل... اضغط للإرسال"
+        recording: "جاري التسجيل... اضغط للإرسال",
+        
+        // --- الكلمات الجديدة التي حلت مشكلة الصور ---
+        amount: "المبلغ",
+        bank_name: "اسم المصرف",
+        withdraw_note: "ملاحظة: سيتم خصم المبلغ من رصيدك حتى تتم الموافقة على الطلب.",
+        transfer_amt: "مبلغ التحويل",
+        send_review: "إرسال للمراجعة",
+        cancel_request: "إلغاء الطلب"
     },
     en: {
         app_name: "Khdamat", app_name_short: "Khdamat", login_title: "Login",
@@ -132,7 +140,15 @@ var translations = {
         pay_now: "Pay Now", reject_offer: "Reject",
         type_message: "Type your message...", record_voice: "Voice",
         attach_image: "Image", attach_file: "PDF", emoji: "Emoji",
-        recording: "Recording... tap to send"
+        recording: "Recording... tap to send",
+
+        // --- الكلمات الجديدة ---
+        amount: "Amount",
+        bank_name: "Bank Name",
+        withdraw_note: "Note: The amount will be deducted from your balance until the request is approved.",
+        transfer_amt: "Transfer Amount",
+        send_review: "Send for Review",
+        cancel_request: "Cancel Request"
     }
 };
 
