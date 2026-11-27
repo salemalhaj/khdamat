@@ -1116,24 +1116,23 @@ function requestWithdrawal() {
     if (amt <= 0) return Swal.fire(t('alert'), 'المبلغ غير صحيح', 'warning');
 
     Swal.fire({ title: t('sending'), didOpen: function() { Swal.showLoading(); } });
-    _supabase.from('wallets').select('id, balance').eq('user_id', currentUser.id).maybeSingle().then(function(wr) {
-        if (!wr.data) return Swal.fire('خطأ', 'محفظتك غير موجودة', 'error');
-        var bal = Number(wr.data.balance);
-        if (bal < amt) return Swal.fire(t('insufficient_balance'), 'رصيدك غير كافٍ', 'warning');
-        _supabase.from('wallets').update({ balance: bal - amt }).eq('id', wr.data.id).then(function(upd) {
-            if (upd.error) return handleError(upd.error);
-            var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
-            _supabase.from('withdrawals').insert([{ user_id: currentUser.id, amount: amt, bank_details: details, status: 'pending' }]).then(function(ins) {
-                if (ins.error) {
-                    _supabase.from('wallets').update({ balance: bal }).eq('id', wr.data.id);
-                    return handleError(ins.error);
-                }
-                _supabase.from('transactions').insert([{ wallet_id: wr.data.id, type: 'withdrawal', amount: amt, reference: 'طلب سحب (مجمّد)' }]);
-                _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
-                Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد ' + amt + ' ' + t('currency'), 'success');
-                renderWallet();
-            });
-        });
+    
+    var details = name + ' | ' + bank + ' | ' + branch + ' | ' + acc + ' | ' + iban;
+
+    // استدعاء الدالة الآمنة في قاعدة البيانات
+    _supabase.rpc('request_withdrawal_rpc', { 
+        p_amount: amt, 
+        p_bank_details: details 
+    }).then(function(res) {
+        if (res.error || !res.data || !res.data.success) {
+            var msg = res.error ? res.error.message : (res.data ? res.data.message : 'فشل');
+            if (res.data && res.data.message === 'insufficient_balance') msg = 'رصيدك غير كافٍ';
+            return Swal.fire('خطأ', msg, 'error');
+        }
+        
+        _supabase.rpc('notify_admins', { p_title: 'Withdrawal Request', p_message: name + ' requests ' + amt });
+        Swal.fire(t('success'), 'تم إرسال طلب السحب وتجميد ' + amt + ' ' + t('currency'), 'success');
+        renderWallet();
     }).catch(handleError);
 }
 
