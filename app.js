@@ -2124,56 +2124,71 @@ function renderAdmin() {
         _supabase.from('wallets').select('balance').then(function(wsRes) {
             var total = 0;
             if (wsRes.data) for (var i = 0; i < wsRes.data.length; i++) total += Number(wsRes.data[i].balance);
-            _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(myWRes) {
-                var myBal = myWRes.data ? Number(myWRes.data.balance).toFixed(2) : '0.00';
-                _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
-                    _supabase.from('withdrawals').select('*').in('status', ['pending', 'processing']).then(function(pwRes) {
-                        _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
-                            _supabase.from('payment_requests').select('*').eq('status', 'pending').then(function(prRes) {
-                                var prCount = prRes.data ? prRes.data.length : 0;
-                                var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2>';
-                                c += '<div class="grid-2" style="margin-bottom:15px;">';
-                                c += '<div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div>';
-                                c += '<div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div>';
-                                c += '<div class="stat-box" style="background:linear-gradient(135deg,#27ae60,#2ecc71); color:white;"><h3>' + myBal + '</h3><p>' + t('my_balance') + ' (' + t('currency') + ')</p></div>';
-                                c += '</div>';
-                                c += '<div class="tabs" style="overflow-x:auto;">';
-                                c += '<div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-offers\')">💸 عروض (' + prCount + ')</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-escrow\')">🔒 المبالغ المحجوزة</div>'; // التبويب الجديد
-                                c += '<div class="tab" onclick="adminTab(this, \'a-devices\')">📱 الأجهزة</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>';
-                                c += '<div class="tab" onclick="adminTab(this, \'a-store\')">المتجر</div>';
-                                c += '</div><div id="a-serv">';
-                                if (psRes.data) for (var j = 0; j < psRes.data.length; j++) {
-                                    var s = psRes.data[j];
-                                    c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + escHtml(s.title) + '</strong> - ' + escHtml(s.price) + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + escJs(s.id) + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + escJs(s.id) + '\')">' + t('reject') + '</button></div></div>';
-                                }
-                                if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
-                                c += '</div>';
-                                c += '<div id="a-with" class="hidden"></div>';
-                                c += '<div id="a-trans" class="hidden">';
-                                if (ptRes.data) for (var m = 0; m < ptRes.data.length; m++) {
-                                    var tx = ptRes.data[m];
-                                    var d = parseBankDetails(tx.bank_details);
-                                    c += '<div class="card" style="padding:15px; margin-bottom:10px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong>' + t('amount') + ': ' + escHtml(tx.amount) + ' ' + t('currency') + '</strong></div><div style="font-size:13px; line-height:1.9; background:#eef5ff; padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid #bce;"><div><i class="fa-solid fa-user"></i> ' + escHtml(d.full_name) + '</div><div><i class="fa-solid fa-building-columns"></i> ' + escHtml(d.bank_name) + '</div><div><i class="fa-solid fa-hashtag"></i> <span dir="ltr">' + escHtml(d.account_number) + '</span></div></div><a href="' + escHtml(tx.receipt_url || '#') + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;"><i class="fa-solid fa-image"></i> ' + t('view_receipt') + '</a><div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="approveTransfer(\'' + escJs(tx.id) + '\', \'' + escJs(tx.user_id) + '\', ' + Number(tx.amount) + ')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectTransfer(\'' + escJs(tx.id) + '\')">' + t('reject_transfer') + '</button></div></div>';
-                                }
-                                if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
-                                c += '</div>';
-                                c += '<div id="a-offers" class="hidden"></div>';
-                                c += '<div id="a-escrow" class="hidden"></div>'; // حاوية التبويب الجديد
-                                c += '<div id="a-devices" class="hidden"></div>';
-                                c += '<div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
-                                c += '<div id="a-users" class="hidden"></div>';
-                                c += '<div id="a-ads" class="hidden"></div>';
-                                c += '<div id="a-settings" class="hidden"></div>';
-                                c += '<div id="a-store" class="hidden"></div>';
-                                document.getElementById('page-admin').innerHTML = c;
+            
+            // حساب المبالغ المحجوزة
+            _supabase.from('payment_requests').select('amount').eq('status', 'paid').or('is_released.eq.false,is_released.is.null').then(function(escRes) {
+                var escrowTotal = 0;
+                if (escRes.data) for (var k = 0; k < escRes.data.length; k++) escrowTotal += Number(escRes.data[k].amount);
+
+                _supabase.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle().then(function(myWRes) {
+                    var myBal = myWRes.data ? Number(myWRes.data.balance).toFixed(2) : '0.00';
+                    _supabase.from('services').select('*').eq('status', 'pending').then(function(psRes) {
+                        _supabase.from('withdrawals').select('*').in('status', ['pending', 'processing']).then(function(pwRes) {
+                            _supabase.from('bank_transfers').select('*').eq('status', 'pending').then(function(ptRes) {
+                                _supabase.from('payment_requests').select('*').eq('status', 'pending').then(function(prRes) {
+                                    var prCount = prRes.data ? prRes.data.length : 0;
+                                    
+                                    var c = '<h2 style="color:var(--accent); margin-bottom:15px;"><i class="fa-solid fa-shield-halved"></i> ' + t('admin_title') + '</h2>';
+                                    
+                                    // المربعات الإحصائية (4 مربعات)
+                                    c += '<div class="grid-2" style="margin-bottom:15px;">';
+                                    c += '<div class="stat-box"><h3>' + (ucRes.count || 0) + '</h3><p>' + t('users') + '</p></div>';
+                                    c += '<div class="stat-box"><h3>' + total.toFixed(0) + '</h3><p>' + t('total_money') + '</p></div>';
+                                    c += '<div class="stat-box" style="background:linear-gradient(135deg,#27ae60,#2ecc71); color:white;"><h3>' + myBal + '</h3><p>محفظتي الشخصية (' + t('currency') + ')</p></div>';
+                                    c += '<div class="stat-box" style="background:linear-gradient(135deg,#f39c12,#e67e22); color:white;"><h3>' + escrowTotal.toFixed(2) + '</h3><p>المبالغ المحجوزة (أمانات)</p></div>';
+                                    c += '</div>';
+                                    
+                                    c += '<div class="tabs" style="overflow-x:auto;">';
+                                    c += '<div class="tab active" onclick="adminTab(this, \'a-serv\')">' + t('nav_services') + ' (' + (psRes.data ? psRes.data.length : 0) + ')</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-with\')">' + t('withdrawals') + ' (' + (pwRes.data ? pwRes.data.length : 0) + ')</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-trans\')">' + t('transfers') + ' (' + (ptRes.data ? ptRes.data.length : 0) + ')</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-offers\')">💸 عروض (' + prCount + ')</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-escrow\')">🔒 المبالغ المحجوزة</div>'; 
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-devices\')">📱 الأجهزة</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-cards\')">' + t('cards') + '</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-users\')">مستخدمون</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-ads\')">الإعلانات</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-settings\')">الإعدادات</div>';
+                                    c += '<div class="tab" onclick="adminTab(this, \'a-store\')">المتجر</div>';
+                                    c += '</div><div id="a-serv">';
+                                    
+                                    if (psRes.data) for (var j = 0; j < psRes.data.length; j++) {
+                                        var s = psRes.data[j];
+                                        c += '<div class="card" style="padding:15px; margin-bottom:10px;"><strong>' + escHtml(s.title) + '</strong> - ' + escHtml(s.price) + ' ' + t('currency') + '<div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="approveService(\'' + escJs(s.id) + '\')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" onclick="rejectService(\'' + escJs(s.id) + '\')">' + t('reject') + '</button></div></div>';
+                                    }
+                                    if (!psRes.data || !psRes.data.length) c += '<p style="text-align:center;">' + t('no_services') + '</p>';
+                                    c += '</div>';
+                                    
+                                    c += '<div id="a-with" class="hidden"></div>';
+                                    c += '<div id="a-trans" class="hidden">';
+                                    if (ptRes.data) for (var m = 0; m < ptRes.data.length; m++) {
+                                        var tx = ptRes.data[m];
+                                        var d = parseBankDetails(tx.bank_details);
+                                        c += '<div class="card" style="padding:15px; margin-bottom:10px; border-right:4px solid var(--primary);"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong>' + t('amount') + ': ' + escHtml(tx.amount) + ' ' + t('currency') + '</strong></div><div style="font-size:13px; line-height:1.9; background:#eef5ff; padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid #bce;"><div><i class="fa-solid fa-user"></i> ' + escHtml(d.full_name) + '</div><div><i class="fa-solid fa-building-columns"></i> ' + escHtml(d.bank_name) + '</div><div><i class="fa-solid fa-hashtag"></i> <span dir="ltr">' + escHtml(d.account_number) + '</span></div></div><a href="' + escHtml(tx.receipt_url || '#') + '" target="_blank" style="color:var(--accent); font-size:13px; display:block; margin:5px 0;"><i class="fa-solid fa-image"></i> ' + t('view_receipt') + '</a><div style="display:flex; gap:8px; margin-top:10px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="approveTransfer(\'' + escJs(tx.id) + '\', \'' + escJs(tx.user_id) + '\', ' + Number(tx.amount) + ')">' + t('approve') + '</button><button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectTransfer(\'' + escJs(tx.id) + '\')">' + t('reject_transfer') + '</button></div></div>';
+                                    }
+                                    if (!ptRes.data || !ptRes.data.length) c += '<p style="text-align:center;">' + t('no_orders') + '</p>';
+                                    c += '</div>';
+                                    
+                                    c += '<div id="a-offers" class="hidden"></div>';
+                                    c += '<div id="a-escrow" class="hidden"></div>'; 
+                                    c += '<div id="a-devices" class="hidden"></div>';
+                                    c += '<div id="a-cards" class="hidden"><div class="card" style="padding:15px; margin-bottom:15px;"><h4 style="margin-bottom:10px;">توليد بطاقات جديدة</h4><input type="number" id="gen-amt" placeholder="' + t('card_value') + '"><input type="number" id="gen-cnt" placeholder="' + t('count') + '" value="1"><button class="btn btn-accent" onclick="generateCards()">' + t('generate') + '</button><div id="cards-out" style="margin-top:10px; font-family:monospace; font-size:12px; color:green;"></div></div><div class="card" style="padding:15px;"><h4 style="margin-bottom:10px;">سجل البطاقات</h4><div id="cards-list" style="font-size:13px;">جاري التحميل...</div></div></div>';
+                                    c += '<div id="a-users" class="hidden"></div>';
+                                    c += '<div id="a-ads" class="hidden"></div>';
+                                    c += '<div id="a-settings" class="hidden"></div>';
+                                    c += '<div id="a-store" class="hidden"></div>';
+                                    document.getElementById('page-admin').innerHTML = c;
+                                });
                             });
                         });
                     });
