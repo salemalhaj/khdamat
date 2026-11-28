@@ -1926,24 +1926,23 @@ function renderPaymentRequestBubble(m) {
 
     var actionsHtml = '';
     
-    // التحقق من أن المستخدم الحالي ليس مزوداً (أي أنه العميل/المستخدم)
-    var isProvider = userProfile && userProfile.role === 'provider';
+    // المزود هو من يرسل الرسالة (sender_id). 
+    // إذا كان المستخدم الحالي هو المرسل، فهذا يعني أنه المزود ولن تظهر له أزرار.
+    var isProvider = (m.sender_id === currentUser.id);
 
     if (!isProvider) {
+        // هذا الجزء يظهر للعميل فقط (الذي استلم الرسالة)
         if (status === 'pending') {
-            // العميل يرى زر الدفع والرفض
             actionsHtml = '<div class="pr-actions">' +
                 '<button class="accept" onclick="payPaymentRequest(\'' + escJs(requestId) + '\')">💳 ' + t('pay_now') + '</button>' +
                 '<button class="reject" onclick="rejectPaymentRequest(\'' + escJs(requestId) + '\')">' + t('reject_offer') + '</button>' +
                 '</div>';
         } else if (status === 'paid' && !isReleased) {
-            // العميل فقط هو من يرى زر التحرير
             actionsHtml = '<div class="pr-actions" style="margin-top:10px;">' +
                 '<button class="accept" style="background:#27ae60;" onclick="releaseFunds(\'' + escJs(requestId) + '\')">🔓 موافق، حرر المبلغ للمزود</button>' +
                 '</div>';
         }
     }
-    // المزود لن يرى أي أزرار، بل سيرى الـ statusBadge فقط.
 
     return '<div class="payment-request-bubble">' +
         '<div class="pr-title">💸 ' + t('request_payment_title') + '</div>' +

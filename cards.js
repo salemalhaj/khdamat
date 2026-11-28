@@ -556,7 +556,6 @@ function viewProductCodes(productId, productName, filterMode) {
             var usedCount = codes.filter(function(c) { return c.is_used; }).length;
             var availableCount = total - usedCount;
 
-            // تصفية حسب الفلتر
             var filtered = codes;
             if (filterMode === 'available') filtered = codes.filter(function(c) { return !c.is_used; });
             else if (filterMode === 'used') filtered = codes.filter(function(c) { return c.is_used; });
@@ -564,14 +563,12 @@ function viewProductCodes(productId, productName, filterMode) {
             var html = '<div style="text-align:right;">';
             html += '<h4 style="margin-bottom:12px; color:var(--primary); font-size:15px;">📦 ' + escHtml(productName) + '</h4>';
             
-            // إحصائيات سريعة
             html += '<div style="display:flex; gap:8px; margin-bottom:12px;">' +
                 '<div style="flex:1; background:#e8f5e9; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#27ae60;">' + availableCount + '</div><div style="font-size:10px;">متاح</div></div>' +
                 '<div style="flex:1; background:#fee; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#e74c3c;">' + usedCount + '</div><div style="font-size:10px;">مستخدم</div></div>' +
                 '<div style="flex:1; background:#eef5ff; padding:8px; border-radius:8px; text-align:center;"><div style="font-size:18px; font-weight:bold; color:#3498db;">' + total + '</div><div style="font-size:10px;">الإجمالي</div></div>' +
             '</div>';
 
-            // أزرار الفلتر
             html += '<div style="display:flex; gap:5px; margin-bottom:12px; background:#f0f0f0; padding:4px; border-radius:10px;">' +
                 '<button onclick="viewProductCodes(\'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'all\')" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; ' + (filterMode === 'all' ? 'background:var(--primary); color:white;' : 'background:transparent; color:#666;') + '">الكل (' + total + ')</button>' +
                 '<button onclick="viewProductCodes(\'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'available\')" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; ' + (filterMode === 'available' ? 'background:#27ae60; color:white;' : 'background:transparent; color:#666;') + '">المتاح (' + availableCount + ')</button>' +
@@ -589,6 +586,7 @@ function viewProductCodes(productId, productName, filterMode) {
                     '<th style="padding:8px; text-align:right;">الرقم السري</th>' +
                     '<th style="padding:8px; text-align:center;">الحالة</th>' +
                     '<th style="padding:8px; text-align:right;">المشتري / التاريخ</th>' +
+                    '<th style="padding:8px; text-align:center;">إجراء</th>' + // العمود الجديد
                     '</tr></thead><tbody>';
                 filtered.forEach(function(c, i) {
                     var statusBadge = c.is_used 
@@ -605,11 +603,12 @@ function viewProductCodes(productId, productName, filterMode) {
                         '<td style="padding:6px; font-family:monospace; direction:ltr; font-weight:bold; color:var(--primary); font-size:11px;">' + escHtml(c.pin_code || '-') + '</td>' +
                         '<td style="padding:6px; text-align:center;">' + statusBadge + '</td>' +
                         '<td style="padding:6px; font-size:11px;">' + buyer + '</td>' +
+                        // زر التعديل الجديد
+                        '<td style="padding:6px; text-align:center;"><button class="btn btn-primary btn-sm" style="margin:0; padding:4px 8px;" onclick="editDigitalCode(\'' + escJs(c.id) + '\', \'' + escJs(c.serial_number || '') + '\', \'' + escJs(c.pin_code || '') + '\', \'' + escJs(productId) + '\', \'' + escJs(productName) + '\', \'' + filterMode + '\')"><i class="fa-solid fa-pen"></i></button></td>' +
                     '</tr>';
                 });
                 html += '</tbody></table></div>';
                 
-                // زر النسخ يظهر فقط للأكواد المتاحة
                 if (filterMode !== 'used') {
                     var availableCodes = codes.filter(function(c) { return !c.is_used; });
                     if (availableCodes.length > 0) {
@@ -643,4 +642,43 @@ function copyCodesToClipboard(btn) {
         document.body.removeChild(textarea);
         btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ!';
     }
+}
+
+function editDigitalCode(codeId, currentSerial, currentPin, productId, productName, filterMode) {
+    Swal.fire({
+        title: 'تعديل الكود',
+        html: '<div style="text-align:right;">' +
+              '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:12px;">الرقم التسلسلي:</label>' +
+              '<input id="edit-serial" class="swal2-input" value="' + escHtml(currentSerial) + '" dir="ltr" style="margin-bottom:15px;">' +
+              '<label style="font-weight:bold; display:block; margin-bottom:5px; font-size:12px;">الرقم السري (PIN):</label>' +
+              '<input id="edit-pin" class="swal2-input" value="' + escHtml(currentPin) + '" dir="ltr">' +
+              '</div>',
+        confirmButtonText: 'حفظ التعديل',
+        showCancelButton: true,
+        cancelButtonText: t('cancel'),
+        preConfirm: function() {
+            var s = document.getElementById('edit-serial').value.trim();
+            var p = document.getElementById('edit-pin').value.trim();
+            if (!s) { Swal.showValidationMessage('الرقم التسلسلي مطلوب'); return false; }
+            return { serial: s, pin: p };
+        }
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+        
+        Swal.fire({ title: 'جاري الحفظ...', didOpen: function() { Swal.showLoading(); } });
+        
+        _supabase.from('digital_codes').update({
+            serial_number: r.value.serial,
+            pin_code: r.value.pin
+        }).eq('id', codeId).then(function(res) {
+            if (res.error) return Swal.fire('خطأ', res.error.message, 'error');
+            
+            Swal.fire({ title: 'تم', text: 'تم تعديل الكود بنجاح', icon: 'success', timer: 1500, showConfirmButton: false });
+            
+            // إعادة فتح القائمة بعد ثانية ونصف لتحديث البيانات أمامك
+            setTimeout(function() {
+                viewProductCodes(productId, productName, filterMode);
+            }, 1500);
+        }).catch(handleError);
+    });
 }
