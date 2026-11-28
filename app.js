@@ -718,15 +718,18 @@ function navTo(page) {
     for (var i = 0; i < pages.length; i++) pages[i].classList.add('hidden');
     var target = document.getElementById('page-' + page);
     if (target) target.classList.remove('hidden');
+    
     var navs = document.querySelectorAll('.nav-item');
     for (var j = 0; j < navs.length; j++) navs[j].classList.remove('active');
     var navTarget = document.getElementById('nav-' + page);
     if (navTarget) navTarget.classList.add('active');
+    
     if (page === 'home') renderHome();
     if (page === 'wallet') renderWallet();
     if (page === 'services') renderServices();
     if (page === 'orders') renderOrders();
     if (page === 'messages') renderMessages();
+    if (page === 'escrow') renderEscrow(); // تم إضافة هذا السطر
     if (page === 'admin') renderAdmin();
     if (page === 'cards') renderCardsPage();
     if (page === 'cart') renderCart();
@@ -1913,7 +1916,7 @@ function renderPaymentRequestBubble(m) {
     var note = data.note || '';
     var requestId = data.request_id || '';
     var status = data.status || 'pending';
-    var isReleased = data.is_released || false; // الحالة الجديدة
+    var isReleased = data.is_released || false;
 
     var statusBadge = '';
     if (status === 'paid' && !isReleased) statusBadge = '<span style="background:#f39c12; padding:4px 10px; border-radius:10px; font-size:11px;">🔒 محجوز لدى الإدارة</span>';
@@ -2210,10 +2213,9 @@ function loadAdminEscrow() {
     if (!box) return;
     box.innerHTML = '<p>' + t('loading') + '</p>';
     
-    // جلب طلبات الدفع المدفوعة وغير المحررة
     _supabase.from('payment_requests').select('*')
         .eq('status', 'paid')
-        .eq('is_released', false)
+        .or('is_released.eq.false,is_released.is.null')
         .order('created_at', { ascending: false })
         .then(function(res) {
             if (res.error) { box.innerHTML = '<p style="color:red;">' + escHtml(res.error.message) + '</p>'; return; }
@@ -2927,6 +2929,65 @@ function addPaymentRequestButtonToChat() {
     var closeBtn = header.querySelector('.chat-back');
     if (closeBtn && closeBtn.nextSibling) header.insertBefore(btn, closeBtn.nextSibling);
     else header.appendChild(btn);
+}
+
+function renderEscrow() {
+    document.getElementById('page-escrow').innerHTML = '<div class="card"><p>' + t('loading') + '</p></div>';
+    _supabase.from('payment_requests').select('*')
+        .eq('client_id', currentUser.id)
+        .eq('status', 'paid')
+        .or('is_released.eq.false,is_released.is.null')
+        .order('created_at', { ascending: false })
+        .then(function(res) {
+            var c = '<h2 style="color:var(--primary); margin-bottom:15px;">🔒 أموالي المحجوزة</h2>';
+            if (res.data && res.data.length > 0) {
+                res.data.forEach(function(pr) {
+                    var date = new Date(pr.created_at).toLocaleDateString('ar-EG');
+                    c += '<div class="card" style="padding:15px; margin-bottom:10px; border-right:4px solid #f39c12;">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                            '<strong style="font-size:18px; color:var(--accent);">' + pr.amount + ' ' + t('currency') + '</strong>' +
+                            '<span style="font-size:11px; background:#f39c12; color:white; padding:3px 8px; border-radius:10px;">محجوز لدى الإدارة</span>' +
+                        '</div>' +
+                        '<p style="font-size:12px; color:#666; margin:10px 0;">' + date + '</p>' +
+                        '<button class="btn btn-primary" style="width:100%;" onclick="releaseFunds(\'' + escJs(pr.id) + '\')">🔓 موافق، حرر المبلغ للمزود</button>' +
+                    '</div>';
+                });
+            } else {
+                c += '<div class="card"><p style="text-align:center;">لا توجد لديك أموال محجوزة حالياً.</p></div>';
+            }
+            document.getElementById('page-escrow').innerHTML = c;
+        }).catch(handleError);
+}
+
+function releaseFunds(requestId) {
+    Swal.fire({
+        title: 'تحرير المبلغ؟',
+        text: 'هل أنت متأكد من إتمام الخدمة وموافقتك على تحويل المبلغ للمزود؟ (لا يمكن التراجع)',
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: 'نعم، حرر المبلغ', cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#27ae60'
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+        Swal.fire({ title: 'جاري التحرير...', didOpen: function() { Swal.showLoading(); } });
+        
+        _supabase.rpc('release_funds_to_provider', { p_request_id: requestId }).then(function(res) {
+            if (res.error || !res.data || !res.data.success) {
+                return Swal.fire('خطأ', res.error ? res.error.message : (res.data ? res.data.message : 'فشل التحرير'), 'error');
+            }
+            
+            var textMsg = "✅ تم تحرير المبلغ من قبل العميل وتحويله إلى محفظتك. شكراً لك!";
+            _supabase.from('messages').insert([{
+                sender_id: currentUser.id,
+                receiver_id: currentChatUserId,
+                message: textMsg,
+                message_type: 'text'
+            }]).then(function() {
+                Swal.fire('تم', 'تم تحرير المبلغ للمزود بنجاح', 'success');
+                if (typeof loadChatMessages === 'function') loadChatMessages();
+                if (typeof renderEscrow === 'function') renderEscrow(); // تحديث الصفحة
+            });
+        }).catch(handleError);
+    });
 }
 
 // ================= 15. فحص الجلسة =================
