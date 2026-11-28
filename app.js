@@ -1910,7 +1910,7 @@ function extendChatFromChat() {
 function renderPaymentRequestBubble(m) {
     var data = {};
     try { data = JSON.parse(m.message || '{}'); } catch(e) { data = {}; }
-    var isMe = m.sender_id === currentUser.id;
+    
     var amount = data.amount || 0;
     var type = data.type || 'full';
     var note = data.note || '';
@@ -1925,17 +1925,25 @@ function renderPaymentRequestBubble(m) {
     else statusBadge = '<span style="background:#f39c12; padding:4px 10px; border-radius:10px; font-size:11px;">⏳ ينتظر الدفع</span>';
 
     var actionsHtml = '';
-    // إذا كان المستخدم هو الدافع، والمبلغ مدفوع ولم يتم تحريره بعد -> يظهر زر التحرير
-    if (isMe && status === 'paid' && !isReleased) {
-        actionsHtml = '<div class="pr-actions" style="margin-top:10px;">' +
-            '<button class="accept" style="background:#27ae60;" onclick="releaseFunds(\'' + escJs(requestId) + '\')">🔓 موافق، حرر المبلغ للمزود</button>' +
-            '</div>';
-    } else if (!isMe && status === 'pending') {
-        actionsHtml = '<div class="pr-actions">' +
-            '<button class="accept" onclick="payPaymentRequest(\'' + escJs(requestId) + '\')">💳 ' + t('pay_now') + '</button>' +
-            '<button class="reject" onclick="rejectPaymentRequest(\'' + escJs(requestId) + '\')">' + t('reject_offer') + '</button>' +
-            '</div>';
+    
+    // التحقق من أن المستخدم الحالي ليس مزوداً (أي أنه العميل/المستخدم)
+    var isProvider = userProfile && userProfile.role === 'provider';
+
+    if (!isProvider) {
+        if (status === 'pending') {
+            // العميل يرى زر الدفع والرفض
+            actionsHtml = '<div class="pr-actions">' +
+                '<button class="accept" onclick="payPaymentRequest(\'' + escJs(requestId) + '\')">💳 ' + t('pay_now') + '</button>' +
+                '<button class="reject" onclick="rejectPaymentRequest(\'' + escJs(requestId) + '\')">' + t('reject_offer') + '</button>' +
+                '</div>';
+        } else if (status === 'paid' && !isReleased) {
+            // العميل فقط هو من يرى زر التحرير
+            actionsHtml = '<div class="pr-actions" style="margin-top:10px;">' +
+                '<button class="accept" style="background:#27ae60;" onclick="releaseFunds(\'' + escJs(requestId) + '\')">🔓 موافق، حرر المبلغ للمزود</button>' +
+                '</div>';
+        }
     }
+    // المزود لن يرى أي أزرار، بل سيرى الـ statusBadge فقط.
 
     return '<div class="payment-request-bubble">' +
         '<div class="pr-title">💸 ' + t('request_payment_title') + '</div>' +
